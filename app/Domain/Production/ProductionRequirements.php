@@ -15,7 +15,7 @@ final class ProductionRequirements
     {
         $snapshot = $batch->recipe_snapshot;
         $this->units->assertCompatible($batch->unit, $snapshot['yield_unit']);
-        $plannedBase = $this->units->toBaseScaled($batch->getRawOriginal('planned_quantity'), $batch->unit);
+        $plannedBase = $this->units->toBaseScaled($batch->planned_quantity, $batch->unit);
         $yieldBase = $this->units->toBaseScaled($snapshot['expected_yield'], $snapshot['yield_unit']);
         $ingredients = [];
 
@@ -39,8 +39,8 @@ final class ProductionRequirements
             $availableBase = 0;
             $candidates = [];
             foreach ($query->get() as $lot) {
-                $availableLotScaled = Decimal::toScaledInt($lot->getRawOriginal('quantity'), 3)
-                    - Decimal::toScaledInt($lot->getRawOriginal('reserved_quantity'), 3);
+                $availableLotScaled = Decimal::toScaledInt($lot->quantity, 3)
+                    - Decimal::toScaledInt($lot->reserved_quantity, 3);
                 if ($availableLotScaled <= 0) {
                     continue;
                 }
@@ -66,15 +66,17 @@ final class ProductionRequirements
                     'consume_unit' => $lot->unit,
                 ];
             }
-            $baseUnit = $this->units->baseUnit($item['unit']);
+            $requiredScaled = $this->units->fromBaseScaledCeil($requiredBase, $item['unit']);
+            $availableScaled = $this->units->fromBaseScaledCeil($availableBase, $item['unit']);
+            $missingScaled = $this->units->fromBaseScaledCeil(max(0, $requiredBase - $availableBase), $item['unit']);
             $ingredients[] = [
                 'snapshot_item_index' => $item['index'],
                 'ingredient_product_id' => $item['ingredient_product_id'],
                 'ingredient_name' => $item['ingredient_name'],
-                'required_quantity' => Decimal::fromScaledInt($requiredBase, 3),
-                'normalized_unit' => $baseUnit,
-                'available_quantity' => Decimal::fromScaledInt($availableBase, 3),
-                'missing_quantity' => Decimal::fromScaledInt(max(0, $requiredBase - $availableBase), 3),
+                'required_quantity' => Decimal::fromScaledInt($requiredScaled, 3),
+                'normalized_unit' => $item['unit'],
+                'available_quantity' => Decimal::fromScaledInt($availableScaled, 3),
+                'missing_quantity' => Decimal::fromScaledInt($missingScaled, 3),
                 'can_produce' => $availableBase >= $requiredBase,
                 'candidate_lots' => $candidates,
             ];
@@ -89,7 +91,7 @@ final class ProductionRequirements
                 'expected_yield' => $snapshot['expected_yield'],
                 'yield_unit' => $snapshot['yield_unit'],
             ],
-            'planned_quantity' => $batch->getRawOriginal('planned_quantity'),
+            'planned_quantity' => $batch->planned_quantity,
             'planned_unit' => $batch->unit,
             'ingredients' => $ingredients,
             'can_produce' => collect($ingredients)->every('can_produce'),

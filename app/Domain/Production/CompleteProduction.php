@@ -96,8 +96,8 @@ final class CompleteProduction
                     continue;
                 }
                 $lot = InventoryLot::query()->lockForUpdate()->findOrFail($candidate['lot_id']);
-                $quantity = Decimal::toScaledInt($lot->getRawOriginal('quantity'), 3);
-                $reserved = Decimal::toScaledInt($lot->getRawOriginal('reserved_quantity'), 3);
+                $quantity = Decimal::toScaledInt($lot->quantity, 3);
+                $reserved = Decimal::toScaledInt($lot->reserved_quantity, 3);
                 if ($quantity - $consumeScaled < $reserved) {
                     throw new InsufficientIngredients([$ingredient]);
                 }
@@ -175,7 +175,7 @@ final class CompleteProduction
             'location_id' => $producedLot->location_id,
             'inventory_lot_id' => $producedLot->id,
             'unit' => $producedLot->unit,
-            'quantity' => $producedLot->getRawOriginal('quantity'),
+            'quantity' => $producedLot->quantity,
             'type' => 'production_output',
             'reason' => 'production_completed',
             'reference_type' => ProductionBatch::class,
@@ -217,7 +217,7 @@ final class CompleteProduction
 
     private function raisePerformanceAlerts(ProductionBatch $batch, array $data, TenantContext $tenant): void
     {
-        $planned = $this->units->toBaseScaled($batch->getRawOriginal('planned_quantity'), $batch->unit);
+        $planned = $this->units->toBaseScaled($batch->planned_quantity, $batch->unit);
         $actual = $this->units->toBaseScaled($data['actual_yield'], $data['unit']);
         if ($actual * 100 < $planned * 90) {
             $this->alerts->raise(

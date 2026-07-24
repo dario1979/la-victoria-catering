@@ -12,12 +12,19 @@ class ProductionRecipeConsumptionTest extends TestCase
     use RefreshDatabase;
 
     private int $organization;
+
     private int $branch;
+
     private int $otherBranch;
+
     private int $location;
+
     private int $otherLocation;
+
     private int $finishedProduct;
+
     private int $flour;
+
     private User $user;
 
     protected function setUp(): void

@@ -4,7 +4,7 @@ namespace Tests\Unit;
 
 use App\Domain\Production\UnitConverter;
 use Illuminate\Validation\ValidationException;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class UnitConverterTest extends TestCase
 {

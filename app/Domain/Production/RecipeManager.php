@@ -77,15 +77,15 @@ final class RecipeManager
                 'name' => $recipe->product->name,
                 'unit' => $recipe->product->unit,
             ],
-            'expected_yield' => $recipe->getRawOriginal('expected_yield'),
+            'expected_yield' => $recipe->expected_yield,
             'yield_unit' => $recipe->yield_unit,
-            'theoretical_waste_percent' => $recipe->getRawOriginal('theoretical_waste_percent'),
+            'theoretical_waste_percent' => $recipe->theoretical_waste_percent,
             'items' => $recipe->items->values()->map(fn ($item, int $index) => [
                 'index' => $index,
                 'ingredient_product_id' => $item->ingredient_product_id,
                 'ingredient_name' => $item->ingredient->name,
                 'product_unit' => $item->ingredient->unit,
-                'quantity' => $item->getRawOriginal('quantity'),
+                'quantity' => $item->quantity,
                 'unit' => $item->unit,
             ])->all(),
         ];
