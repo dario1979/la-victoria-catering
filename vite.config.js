@@ -12,7 +12,7 @@ export default defineConfig({
             registerType: 'autoUpdate',
             manifest: {
                 name: 'La Victoria Bakery',
-                short_name: 'La Victoria Bakery',
+                short_name: 'La Victoria',
                 theme_color: '#7f1d1d',
                 background_color: '#fffaf0',
                 display: 'standalone',
