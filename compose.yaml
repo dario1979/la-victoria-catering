@@ -1,0 +1,136 @@
+name: la-victoria-catering
+
+x-backend: &backend
+  build:
+    context: .
+    dockerfile: docker/backend/Dockerfile
+  env_file:
+    - path: .env
+      required: false
+  environment:
+    APP_ENV: ${APP_ENV:-local}
+    APP_KEY: ${APP_KEY:-}
+    APP_DEBUG: ${APP_DEBUG:-true}
+    APP_URL: ${APP_URL:-http://localhost:8080}
+    DB_CONNECTION: ${DB_CONNECTION:-pgsql}
+    DB_HOST: ${DB_HOST:-postgres}
+    DB_PORT: ${DB_PORT:-5432}
+    DB_DATABASE: ${DB_DATABASE:-la_victoria}
+    DB_USERNAME: ${DB_USERNAME:-la_victoria}
+    DB_PASSWORD: ${DB_PASSWORD:-local_only_change_me}
+    DB_SSLMODE: ${DB_SSLMODE:-disable}
+    CACHE_STORE: ${CACHE_STORE:-redis}
+    QUEUE_CONNECTION: ${QUEUE_CONNECTION:-redis}
+    REDIS_HOST: ${REDIS_HOST:-redis}
+    REDIS_PORT: ${REDIS_PORT:-6379}
+    MAIL_MAILER: ${MAIL_MAILER:-smtp}
+    MAIL_HOST: ${MAIL_HOST:-mailpit}
+    MAIL_PORT: ${MAIL_PORT:-1025}
+  restart: unless-stopped
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  volumes:
+    - app_storage:/var/www/html/storage
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-la_victoria}
+      POSTGRES_USER: ${DB_USERNAME:-la_victoria}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-local_only_change_me}
+    ports:
+      - "${FORWARD_DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${FORWARD_REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    <<: *backend
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      APP_KEY: ${APP_KEY:-}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      APP_URL: ${APP_URL:-http://localhost:8080}
+      DB_CONNECTION: ${DB_CONNECTION:-pgsql}
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_DATABASE: ${DB_DATABASE:-la_victoria}
+      DB_USERNAME: ${DB_USERNAME:-la_victoria}
+      DB_PASSWORD: ${DB_PASSWORD:-local_only_change_me}
+      DB_SSLMODE: ${DB_SSLMODE:-disable}
+      CACHE_STORE: ${CACHE_STORE:-redis}
+      QUEUE_CONNECTION: ${QUEUE_CONNECTION:-redis}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      MAIL_HOST: ${MAIL_HOST:-mailpit}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      RUN_MIGRATIONS: "true"
+    ports:
+      - "${FORWARD_BACKEND_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8000/up"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+
+  queue:
+    <<: *backend
+    command: ["php", "artisan", "queue:work", "redis", "--sleep=1", "--tries=3", "--timeout=90", "--max-time=3600"]
+    stop_grace_period: 30s
+
+  scheduler:
+    <<: *backend
+    command: ["php", "artisan", "schedule:work"]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${FORWARD_FRONTEND_PORT:-8080}:80"
+
+  mailpit:
+    image: axllent/mailpit:v1.21
+    restart: unless-stopped
+    ports:
+      - "${FORWARD_MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${FORWARD_MAILPIT_UI_PORT:-8025}:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:
+  app_storage:

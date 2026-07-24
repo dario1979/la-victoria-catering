@@ -1,0 +1,16 @@
+.git
+.github
+.agents
+.codex
+.env
+.env.*
+!.env.example
+node_modules
+vendor
+public/build
+bootstrap/cache/*
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+*.log
