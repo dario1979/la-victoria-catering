@@ -1,0 +1,100 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1;
+
+use App\Domain\Production\ProductionWorkflow;
+use App\Http\Controllers\Controller;
+use App\Models\ProductionBatch;
+use App\Support\IdempotentAction;
+use App\Support\TenantContext;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+
+final class ProductionOrderController extends Controller
+{
+    public function index(Request $request, TenantContext $tenant): JsonResponse
+    {
+        return response()->json(ProductionBatch::query()
+            ->where('organization_id', $tenant->organization->id)
+            ->where('branch_id', $tenant->branch->id)
+            ->with('order')->latest('id')->paginate(min($request->integer('per_page', 20), 100)));
+    }
+
+    public function store(Request $request, ProductionWorkflow $workflow, IdempotentAction $keys, TenantContext $tenant): JsonResponse
+    {
+        abort_unless($tenant->can('owner', 'admin', 'production'), 403);
+        $data = $request->validate([
+            'order_id' => ['required', Rule::exists('orders', 'id')->where(
+                fn ($query) => $query->where('organization_id', $tenant->organization->id)
+                    ->where('branch_id', $tenant->branch->id)
+            )],
+            'recipe_id' => ['required', Rule::exists('recipes', 'id')->where(
+                fn ($query) => $query->where('status', 'approved')->whereExists(
+                    fn ($products) => $products->selectRaw('1')->from('products')
+                        ->whereColumn('products.id', 'recipes.product_id')
+                        ->where('products.organization_id', $tenant->organization->id)
+                )
+            )],
+            'planned_quantity' => ['required', 'decimal:0,3', 'gt:0'],
+            'unit' => ['required', 'string', 'max:24'],
+        ]);
+        [$body, $status, $replayed] = $keys->run(
+            "organizations.{$tenant->organization->id}.production.create",
+            $this->key($request), $data,
+            fn () => [['data' => $workflow->create($data, $tenant)->toArray()], 201]
+        );
+
+        return response()->json($body, $status)->header('Idempotency-Replayed', $replayed ? 'true' : 'false');
+    }
+
+    public function show(ProductionBatch $productionOrder, TenantContext $tenant): JsonResponse
+    {
+        $this->assertTenant($productionOrder, $tenant);
+
+        return response()->json(['data' => $productionOrder->load('order')]);
+    }
+
+    public function start(Request $request, ProductionBatch $productionOrder, ProductionWorkflow $workflow, IdempotentAction $keys, TenantContext $tenant): JsonResponse
+    {
+        return $this->mutation($request, $productionOrder, $tenant, $keys, 'start',
+            fn () => $workflow->start($productionOrder, $request->user()->id));
+    }
+
+    public function complete(Request $request, ProductionBatch $productionOrder, ProductionWorkflow $workflow, IdempotentAction $keys, TenantContext $tenant): JsonResponse
+    {
+        $data = $request->validate([
+            'actual_yield' => ['required', 'decimal:0,3', 'gte:0'],
+            'waste_quantity' => ['required', 'decimal:0,3', 'gte:0'],
+        ]);
+
+        return $this->mutation($request, $productionOrder, $tenant, $keys, 'complete',
+            fn () => $workflow->complete(
+                $productionOrder, $data['actual_yield'], $data['waste_quantity'], $request->user()->id
+            ), $data);
+    }
+
+    private function mutation(Request $request, ProductionBatch $batch, TenantContext $tenant, IdempotentAction $keys, string $operation, callable $action, array $data = []): JsonResponse
+    {
+        $this->assertTenant($batch, $tenant);
+        abort_unless($tenant->can('owner', 'admin', 'production'), 403);
+        [$body, $status, $replayed] = $keys->run(
+            "organizations.{$tenant->organization->id}.production.{$batch->id}.{$operation}",
+            $this->key($request), $data, fn () => [['data' => $action()->toArray()], 200]
+        );
+
+        return response()->json($body, $status)->header('Idempotency-Replayed', $replayed ? 'true' : 'false');
+    }
+
+    private function assertTenant(ProductionBatch $batch, TenantContext $tenant): void
+    {
+        abort_unless($batch->organization_id === $tenant->organization->id && $batch->branch_id === $tenant->branch->id, 404);
+    }
+
+    private function key(Request $request): string
+    {
+        abort_unless($request->hasHeader('Idempotency-Key'), 400, 'Idempotency-Key header is required.');
+
+        return $request->header('Idempotency-Key');
+    }
+}
