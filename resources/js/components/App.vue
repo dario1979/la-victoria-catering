@@ -28,9 +28,27 @@ const paymentForm = reactive({
     external_reference: '',
 });
 const transitionForm = reactive({ order_id: 0, status: 'confirmed' as OrderStatus });
+const customerForm = reactive({ name: '', email: '' });
+const productForm = reactive({
+    name: '', type: 'finished_product', unit: 'unit', minimum_stock: '0.000', price: '0.00',
+});
+const lotForm = reactive({
+    product_id: 0, location_id: 0, code: '', unit: 'unit',
+    quantity: '0.000', expires_at: '', reason: 'initial receipt', type: 'receipt',
+});
+const productionForm = reactive({
+    id: 0, order_id: 0, recipe_id: 0, planned_quantity: '1.000',
+    actual_yield: '1.000', waste_quantity: '0.000', unit: 'unit',
+});
+const deliveryForm = reactive({ order_id: 0, method: 'pickup', notes: '' });
+const alertForm = reactive({ id: 0 });
 let orderKey = idempotencyKey('order');
 let paymentKey = idempotencyKey('payment');
 let transitionKey = idempotencyKey('transition');
+let lotKey = idempotencyKey('lot');
+let productionKey = idempotencyKey('production');
+let productionActionKey = idempotencyKey('production-action');
+let deliveryKey = idempotencyKey('delivery');
 
 const navigation: Array<{ id: View; label: string; icon: string }> = [
     { id: 'dashboard', label: 'Resumen', icon: '⌂' },
@@ -158,6 +176,80 @@ function createPayment() {
         paymentForm.amount = '0.00';
         paymentForm.external_reference = '';
         notice.value = `Pago #${created.id} registrado correctamente.`;
+    });
+}
+
+function createCustomer() {
+    return run(async () => {
+        await api.post('/customers', customerForm);
+        customerForm.name = '';
+        customerForm.email = '';
+        await loadView('customers');
+        notice.value = 'Cliente creado.';
+    });
+}
+
+function createProduct() {
+    return run(async () => {
+        await api.post('/products', productForm);
+        productForm.name = '';
+        await loadView('products');
+        notice.value = 'Producto creado.';
+    });
+}
+
+function adjustLot() {
+    return run(async () => {
+        await api.post('/lots/adjustments', {
+            ...lotForm, expires_at: lotForm.expires_at || undefined,
+        }, lotKey);
+        lotKey = idempotencyKey('lot');
+        await loadView('lots');
+        notice.value = 'Movimiento de stock registrado.';
+    });
+}
+
+function createProduction() {
+    return run(async () => {
+        const created = await api.post<{ id: number }>('/production-orders', {
+            order_id: productionForm.order_id, recipe_id: productionForm.recipe_id,
+            planned_quantity: productionForm.planned_quantity, unit: productionForm.unit,
+        }, productionKey);
+        productionForm.id = created.id;
+        productionKey = idempotencyKey('production');
+        await loadView('production');
+        notice.value = `Producción #${created.id} creada.`;
+    });
+}
+
+function productionAction(action: 'start' | 'complete') {
+    return run(async () => {
+        const body = action === 'complete'
+            ? { actual_yield: productionForm.actual_yield, waste_quantity: productionForm.waste_quantity }
+            : {};
+        await api.post(`/production-orders/${productionForm.id}/${action}`, body, productionActionKey);
+        productionActionKey = idempotencyKey('production-action');
+        await loadView('production');
+        notice.value = action === 'start' ? 'Producción iniciada.' : 'Producción completada.';
+    });
+}
+
+function deliverOrder() {
+    return run(async () => {
+        await api.post(`/orders/${deliveryForm.order_id}/delivery`, {
+            method: deliveryForm.method, notes: deliveryForm.notes || undefined,
+        }, deliveryKey);
+        deliveryKey = idempotencyKey('delivery');
+        await loadView('orders');
+        notice.value = `Pedido #${deliveryForm.order_id} entregado.`;
+    });
+}
+
+function resolveAlert() {
+    return run(async () => {
+        await api.post(`/alerts/${alertForm.id}/resolve`, {});
+        await loadView('alerts');
+        notice.value = `Alerta #${alertForm.id} resuelta.`;
     });
 }
 
@@ -306,6 +398,15 @@ onBeforeUnmount(() => {
                         <button class="secondary" :disabled="busy || !online">Actualizar estado</button>
                     </form>
                 </div>
+                <div class="panel">
+                    <div class="panel-head"><div><p class="eyebrow">ENTREGA</p><h3>Entregar pedido listo</h3></div></div>
+                    <form class="form-stack" @submit.prevent="deliverOrder">
+                        <label>ID de pedido<input v-model.number="deliveryForm.order_id" required min="1" type="number"></label>
+                        <label>Método<select v-model="deliveryForm.method"><option value="pickup">Retiro</option><option value="delivery">Reparto</option></select></label>
+                        <label>Observaciones<input v-model="deliveryForm.notes" maxlength="2000"></label>
+                        <button class="primary" :disabled="busy || !online">Confirmar entrega</button>
+                    </form>
+                </div>
                 <div class="panel full">
                     <div class="panel-head"><h3>Pedidos de esta sesión</h3></div>
                     <div v-if="recentOrders.length" class="table-wrap"><table><thead><tr><th>ID</th><th>Cliente</th><th>Estado</th><th>Total</th><th>Pagado</th></tr></thead><tbody>
@@ -336,6 +437,47 @@ onBeforeUnmount(() => {
                     <span class="module-letter">{{ navigation.find(n => n.id === view)?.icon }}</span>
                     <p class="eyebrow">DATOS DEL SERVIDOR</p>
                     <h2>{{ pageTitle }}</h2>
+                    <form v-if="view === 'customers'" class="form-grid" @submit.prevent="createCustomer">
+                        <label>Nombre<input v-model="customerForm.name" required maxlength="255"></label>
+                        <label>Correo<input v-model="customerForm.email" type="email"></label>
+                        <button class="primary" :disabled="busy || !online">Crear cliente</button>
+                    </form>
+                    <form v-if="view === 'products'" class="form-grid" @submit.prevent="createProduct">
+                        <label>Nombre<input v-model="productForm.name" required></label>
+                        <label>Tipo<select v-model="productForm.type"><option value="raw_material">Materia prima</option><option value="semi_finished">Semielaborado</option><option value="finished_product">Terminado</option><option value="packaging">Empaque</option></select></label>
+                        <label>Unidad<select v-model="productForm.unit"><option>unit</option><option>kg</option><option>g</option><option>l</option><option>ml</option></select></label>
+                        <label>Stock mínimo<input v-model="productForm.minimum_stock" type="number" step="0.001" min="0"></label>
+                        <label>Precio<input v-model="productForm.price" type="number" step="0.01" min="0"></label>
+                        <button class="primary" :disabled="busy || !online">Crear producto</button>
+                    </form>
+                    <form v-if="view === 'lots'" class="form-grid" @submit.prevent="adjustLot">
+                        <label>Producto ID<input v-model.number="lotForm.product_id" required min="1" type="number"></label>
+                        <label>Ubicación ID<input v-model.number="lotForm.location_id" required min="1" type="number"></label>
+                        <label>Código<input v-model="lotForm.code" required></label>
+                        <label>Unidad<select v-model="lotForm.unit"><option>unit</option><option>kg</option><option>g</option><option>l</option><option>ml</option></select></label>
+                        <label>Cantidad<input v-model="lotForm.quantity" required type="number" step="0.001"></label>
+                        <label>Vencimiento<input v-model="lotForm.expires_at" type="date"></label>
+                        <button class="primary" :disabled="busy || !online">Registrar recepción</button>
+                    </form>
+                    <div v-if="view === 'production'" class="form-stack">
+                        <form class="form-grid" @submit.prevent="createProduction">
+                            <label>Pedido ID<input v-model.number="productionForm.order_id" required min="1" type="number"></label>
+                            <label>Receta ID<input v-model.number="productionForm.recipe_id" required min="1" type="number"></label>
+                            <label>Cantidad<input v-model="productionForm.planned_quantity" required type="number" step="0.001"></label>
+                            <button class="primary" :disabled="busy || !online">Crear producción</button>
+                        </form>
+                        <form class="form-grid" @submit.prevent>
+                            <label>Producción ID<input v-model.number="productionForm.id" required min="1" type="number"></label>
+                            <label>Rendimiento<input v-model="productionForm.actual_yield" type="number" step="0.001"></label>
+                            <label>Merma<input v-model="productionForm.waste_quantity" type="number" step="0.001"></label>
+                            <button class="secondary" :disabled="busy || !online" @click="productionAction('start')">Iniciar</button>
+                            <button class="primary" :disabled="busy || !online" @click="productionAction('complete')">Completar</button>
+                        </form>
+                    </div>
+                    <form v-if="view === 'alerts'" class="form-grid" @submit.prevent="resolveAlert">
+                        <label>Alerta ID<input v-model.number="alertForm.id" required min="1" type="number"></label>
+                        <button class="primary" :disabled="busy || !online">Resolver alerta</button>
+                    </form>
                     <p v-if="!moduleRows.length">No hay registros para esta sucursal.</p>
                     <div v-else class="table-wrap">
                         <table>
