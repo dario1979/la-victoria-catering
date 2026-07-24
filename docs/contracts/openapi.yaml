@@ -1,0 +1,353 @@
+openapi: 3.1.0
+info:
+  title: La Victoria Catering API
+  version: v1
+servers:
+  - url: /api/v1
+security:
+  - cookieSession: []
+paths:
+  /auth/csrf:
+    get:
+      security: []
+      summary: Inicia una sesión y devuelve el token CSRF
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+  /auth/login:
+    post:
+      security: []
+      summary: Inicia sesión
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { description: Demasiados intentos }
+  /auth/me:
+    get:
+      summary: Devuelve usuario, organizaciones, roles y sucursales
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+  /auth/logout:
+    post:
+      summary: Cierra e invalida la sesión
+      responses:
+        '204': { description: Sesión cerrada }
+  /customers:
+    get:
+      summary: Lista y busca clientes
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+    post:
+      summary: Crea un cliente
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /customers/{customer}:
+    parameters:
+      - $ref: '#/components/parameters/CustomerId'
+      - $ref: '#/components/parameters/Organization'
+      - $ref: '#/components/parameters/Branch'
+    get:
+      summary: Consulta cliente y saldo derivado
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      summary: Actualiza o activa/desactiva un cliente
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /products:
+    get:
+      summary: Lista productos
+      parameters: [{ $ref: '#/components/parameters/Organization' }, { $ref: '#/components/parameters/Branch' }]
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+    post:
+      summary: Crea un producto
+      parameters: [{ $ref: '#/components/parameters/Organization' }, { $ref: '#/components/parameters/Branch' }]
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+  /products/{product}:
+    parameters:
+      - { name: product, in: path, required: true, schema: { type: integer } }
+      - $ref: '#/components/parameters/Organization'
+      - $ref: '#/components/parameters/Branch'
+    get:
+      summary: Consulta un producto
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+    patch:
+      summary: Actualiza un producto
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+  /locations:
+    get:
+      summary: Lista ubicaciones de la sucursal activa
+      parameters: [{ $ref: '#/components/parameters/Organization' }, { $ref: '#/components/parameters/Branch' }]
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+    post:
+      summary: Crea una ubicación en la sucursal activa
+      parameters: [{ $ref: '#/components/parameters/Organization' }, { $ref: '#/components/parameters/Branch' }]
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+  /lots:
+    get:
+      summary: Lista lotes FEFO de la sucursal
+      parameters: [{ $ref: '#/components/parameters/Organization' }, { $ref: '#/components/parameters/Branch' }]
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+  /lots/{lot}:
+    get:
+      summary: Consulta lote y movimientos inmutables
+      parameters:
+        - { name: lot, in: path, required: true, schema: { type: integer } }
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+  /lots/adjustments:
+    post:
+      summary: Recibe o ajusta stock sin editar directamente un lote
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /orders:
+    get:
+      summary: Lista y filtra pedidos
+      parameters: [{ $ref: '#/components/parameters/Organization' }, { $ref: '#/components/parameters/Branch' }]
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+    post:
+      summary: Crea un pedido
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /orders/{order}:
+    get:
+      summary: Consulta pedido, historial y reservas
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /orders/{order}/allowed-transitions:
+    get:
+      summary: Lista transiciones permitidas
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+  /orders/{order}/transitions:
+    post:
+      summary: Cambia el estado con auditoría e idempotencia
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /orders/{order}/delivery:
+    post:
+      summary: Entrega un pedido listo
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+  /production-orders:
+    get:
+      summary: Lista órdenes de producción
+      parameters: [{ $ref: '#/components/parameters/Organization' }, { $ref: '#/components/parameters/Branch' }]
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+    post:
+      summary: Crea producción para un pedido confirmado
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+  /production-orders/{productionOrder}:
+    get:
+      summary: Consulta producción
+      parameters:
+        - $ref: '#/components/parameters/ProductionId'
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+  /production-orders/{productionOrder}/start:
+    post:
+      summary: Inicia producción idempotentemente
+      parameters:
+        - $ref: '#/components/parameters/ProductionId'
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+  /production-orders/{productionOrder}/complete:
+    post:
+      summary: Registra rendimiento y merma; deja el pedido listo
+      parameters:
+        - $ref: '#/components/parameters/ProductionId'
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+  /payments:
+    get:
+      summary: Lista pagos por sucursal o pedido
+      parameters: [{ $ref: '#/components/parameters/Organization' }, { $ref: '#/components/parameters/Branch' }]
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+    post:
+      summary: Registra un pago idempotente
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /payments/{payment}:
+    get:
+      summary: Consulta un pago
+      parameters:
+        - { name: payment, in: path, required: true, schema: { type: integer } }
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+  /alerts:
+    get:
+      summary: Lista y filtra alertas operativas
+      parameters: [{ $ref: '#/components/parameters/Organization' }, { $ref: '#/components/parameters/Branch' }]
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+  /alerts/{alert}:
+    get:
+      summary: Consulta y marca leída una alerta
+      parameters:
+        - $ref: '#/components/parameters/AlertId'
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+  /alerts/{alert}/acknowledge:
+    post:
+      summary: Reconoce una alerta
+      parameters:
+        - $ref: '#/components/parameters/AlertId'
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+  /alerts/{alert}/resolve:
+    post:
+      summary: Resuelve una alerta
+      parameters:
+        - $ref: '#/components/parameters/AlertId'
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+components:
+  securitySchemes:
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: la_victoria_session
+  parameters:
+    Organization:
+      name: X-Organization-ID
+      in: header
+      required: true
+      schema: { type: integer }
+    Branch:
+      name: X-Branch-ID
+      in: header
+      required: true
+      schema: { type: integer }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 255 }
+    Search:
+      name: search
+      in: query
+      schema: { type: string }
+    CustomerId:
+      name: customer
+      in: path
+      required: true
+      schema: { type: integer }
+    OrderId:
+      name: order
+      in: path
+      required: true
+      schema: { type: integer }
+    ProductionId:
+      name: productionOrder
+      in: path
+      required: true
+      schema: { type: integer }
+    AlertId:
+      name: alert
+      in: path
+      required: true
+      schema: { type: integer }
+  responses:
+    Ok:
+      description: Operación exitosa
+    Created:
+      description: Recurso creado; Idempotency-Replayed indica un reintento cuando aplica
+      headers:
+        Idempotency-Replayed:
+          schema: { type: boolean }
+    Paginated:
+      description: Colección paginada
+    ValidationError:
+      description: Validación o regla de negocio incumplida
+    Unauthenticated:
+      description: Sesión ausente o vencida
+    NotFound:
+      description: Recurso inexistente o fuera del tenant activo

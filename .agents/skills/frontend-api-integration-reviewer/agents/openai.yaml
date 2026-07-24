@@ -1,0 +1,4 @@
+interface:
+  display_name: "Frontend API Integration Reviewer"
+  short_description: "Review Vue API flows, retries, and session state"
+  default_prompt: "Use $frontend-api-integration-reviewer to review this Vue flow against the backend API."

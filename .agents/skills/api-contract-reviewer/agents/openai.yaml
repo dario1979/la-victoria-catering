@@ -1,0 +1,4 @@
+interface:
+  display_name: "API Contract Reviewer"
+  short_description: "Keep routes, OpenAPI, clients, and tests aligned"
+  default_prompt: "Use $api-contract-reviewer to find drift between the API implementation and contract."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tenant Isolation Reviewer"
+  short_description: "Verify organization and branch data isolation"
+  default_prompt: "Use $tenant-isolation-reviewer to review this API change for cross-tenant access."
