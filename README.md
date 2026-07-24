@@ -1,6 +1,8 @@
-# La Victoria Catering
+# La Victoria Bakery
 
-Plataforma integral para la operación de panadería y catering en Argentina.
+Plataforma integral para la operación de panadería en Argentina.
+
+Identidad comercial: `lavictoria.bakery`.
 
 ## Base tecnológica
 

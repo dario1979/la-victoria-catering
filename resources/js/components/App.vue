@@ -303,7 +303,7 @@ onBeforeUnmount(() => {
     <main v-if="!session.authenticated" class="login-page">
         <section class="login-card">
             <p class="brand-mark">LV</p>
-            <p class="eyebrow">LA VICTORIA · GESTIÓN</p>
+            <p class="eyebrow">LA VICTORIA BAKERY · GESTIÓN</p>
             <h1>Bienvenido a la mesa de operaciones.</h1>
             <p class="muted">Ingresá para trabajar con pedidos, producción, inventario y cobranzas.</p>
             <form class="form-stack" @submit.prevent="logIn">
@@ -321,7 +321,7 @@ onBeforeUnmount(() => {
 
     <div v-else class="app-layout">
         <aside class="sidebar">
-            <div class="brand"><span>LV</span><div>La Victoria<small>Catering</small></div></div>
+            <div class="brand"><span>LV</span><div>La Victoria<small>Bakery</small></div></div>
             <nav aria-label="Navegación principal">
                 <button
                     v-for="item in navigation"

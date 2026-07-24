@@ -2,7 +2,7 @@
 
 ## Resultado buscado
 
-Centralizar pedidos de panadería y catering, producción, inventario por lote, compras y cobranzas para disminuir faltantes, errores manuales y pérdidas de trazabilidad.
+Centralizar pedidos de panadería, producción, inventario por lote, compras y cobranzas para disminuir faltantes, errores manuales y pérdidas de trazabilidad.
 
 ## Éxito inicial
 

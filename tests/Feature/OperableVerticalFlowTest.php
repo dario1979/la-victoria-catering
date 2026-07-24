@@ -25,7 +25,7 @@ class OperableVerticalFlowTest extends TestCase
             'name' => 'Evento Demo', 'email' => 'evento@example.test',
         ])->assertCreated()->json('data');
         $product = $this->postJson('/api/v1/products', [
-            'name' => 'Bandeja catering', 'type' => 'finished_product', 'unit' => 'unit',
+            'name' => 'Bandeja de panificados', 'type' => 'finished_product', 'unit' => 'unit',
             'minimum_stock' => '2.000', 'price' => '25000.00',
         ])->assertCreated()->json('data');
         $location = $this->postJson('/api/v1/locations', [
@@ -63,7 +63,10 @@ class OperableVerticalFlowTest extends TestCase
             ->assertOk()->assertJsonPath('data.status', 'in_progress');
         $this->withHeader('Idempotency-Key', 'complete-demo')
             ->postJson("/api/v1/production-orders/{$production['id']}/complete", [
-                'actual_yield' => '2.000', 'waste_quantity' => '0.000',
+                'actual_yield' => '2.000', 'unit' => 'unit', 'waste_quantity' => '0.000',
+                'destination_location_id' => $location['id'],
+                'manufactured_at' => now()->toISOString(),
+                'expires_at' => now()->addDays(5)->toDateString(),
             ])->assertOk()->assertJsonPath('data.order.status', 'ready');
 
         $this->withHeader('Idempotency-Key', 'payment-demo')->postJson('/api/v1/payments', [

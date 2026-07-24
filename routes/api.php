@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\ProductionOrderController;
+use App\Http\Controllers\Api\V1\RecipeController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('web')->prefix('v1')->group(function (): void {
@@ -39,7 +40,11 @@ Route::middleware('web')->prefix('v1')->group(function (): void {
             Route::get('/production-orders', [ProductionOrderController::class, 'index']);
             Route::post('/production-orders', [ProductionOrderController::class, 'store']);
             Route::get('/production-orders/{productionOrder}', [ProductionOrderController::class, 'show']);
+            Route::get('/production-orders/{productionOrder}/requirements', [ProductionOrderController::class, 'requirements']);
+            Route::get('/production-orders/{productionOrder}/traceability', [ProductionOrderController::class, 'traceability']);
             Route::post('/production-orders/{productionOrder}/start', [ProductionOrderController::class, 'start']);
+
+            Route::apiResource('recipes', RecipeController::class)->only(['index', 'store', 'show', 'update']);
             Route::post('/production-orders/{productionOrder}/complete', [ProductionOrderController::class, 'complete']);
 
             Route::get('/payments', [PaymentController::class, 'index']);

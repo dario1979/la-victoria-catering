@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Production\CompleteProduction;
+use App\Domain\Production\ProductionRequirements;
+use App\Domain\Production\ProductionTraceability;
 use App\Domain\Production\ProductionWorkflow;
 use App\Http\Controllers\Controller;
 use App\Models\ProductionBatch;
@@ -61,17 +64,54 @@ final class ProductionOrderController extends Controller
             fn () => $workflow->start($productionOrder, $request->user()->id));
     }
 
-    public function complete(Request $request, ProductionBatch $productionOrder, ProductionWorkflow $workflow, IdempotentAction $keys, TenantContext $tenant): JsonResponse
-    {
+    public function complete(
+        Request $request,
+        ProductionBatch $productionOrder,
+        CompleteProduction $completion,
+        IdempotentAction $keys,
+        TenantContext $tenant,
+    ): JsonResponse {
         $data = $request->validate([
             'actual_yield' => ['required', 'decimal:0,3', 'gte:0'],
+            'unit' => ['required', Rule::in(['kg', 'g', 'l', 'ml', 'unit'])],
             'waste_quantity' => ['required', 'decimal:0,3', 'gte:0'],
+            'destination_location_id' => ['required', 'integer'],
+            'manufactured_at' => ['required', 'date'],
+            'expires_at' => ['nullable', 'date', 'after_or_equal:manufactured_at'],
+            'observations' => ['nullable', 'string', 'max:4000'],
         ]);
 
-        return $this->mutation($request, $productionOrder, $tenant, $keys, 'complete',
-            fn () => $workflow->complete(
-                $productionOrder, $data['actual_yield'], $data['waste_quantity'], $request->user()->id
-            ), $data);
+        return $this->mutation(
+            $request,
+            $productionOrder,
+            $tenant,
+            $keys,
+            'complete',
+            fn () => $completion->execute(
+                $productionOrder, $data, $tenant, $request->user()->id
+            ),
+            $data
+        );
+    }
+
+    public function requirements(
+        ProductionBatch $productionOrder,
+        ProductionRequirements $requirements,
+        TenantContext $tenant,
+    ): JsonResponse {
+        $this->assertTenant($productionOrder, $tenant);
+
+        return response()->json(['data' => $requirements->calculate($productionOrder)]);
+    }
+
+    public function traceability(
+        ProductionBatch $productionOrder,
+        ProductionTraceability $traceability,
+        TenantContext $tenant,
+    ): JsonResponse {
+        $this->assertTenant($productionOrder, $tenant);
+
+        return response()->json(['data' => $traceability->forBatch($productionOrder)]);
     }
 
     private function mutation(Request $request, ProductionBatch $batch, TenantContext $tenant, IdempotentAction $keys, string $operation, callable $action, array $data = []): JsonResponse

@@ -12,7 +12,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $organizationId = DB::table('organizations')->insertGetId([
-            'name' => 'La Victoria Demo', 'created_at' => now(), 'updated_at' => now(),
+            'name' => 'La Victoria Bakery', 'created_at' => now(), 'updated_at' => now(),
         ]);
         $branchIds = collect(['Centro', 'Producción'])->map(fn (string $name) => DB::table('branches')->insertGetId([
             'organization_id' => $organizationId, 'name' => $name, 'active' => true,

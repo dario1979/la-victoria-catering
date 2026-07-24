@@ -11,8 +11,8 @@ export default defineConfig({
         VitePWA({
             registerType: 'autoUpdate',
             manifest: {
-                name: 'La Victoria Catering',
-                short_name: 'La Victoria',
+                name: 'La Victoria Bakery',
+                short_name: 'La Victoria Bakery',
                 theme_color: '#7f1d1d',
                 background_color: '#fffaf0',
                 display: 'standalone',

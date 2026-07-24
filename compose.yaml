@@ -1,4 +1,4 @@
-name: la-victoria-catering
+name: la-victoria-bakery
 
 x-backend: &backend
   build:

@@ -34,8 +34,15 @@ final class LotController extends Controller
             404
         );
         $movements = $lot->movements()->latest('id')->paginate(25);
+        $consumedBy = $lot->productionConsumptions()
+            ->with(['productionBatch.producedLot', 'productionBatch.order'])
+            ->latest('id')->get();
 
-        return response()->json(['data' => $lot, 'movements' => $movements]);
+        return response()->json([
+            'data' => $lot,
+            'movements' => $movements,
+            'production_traceability' => $consumedBy,
+        ]);
     }
 
     public function adjust(
