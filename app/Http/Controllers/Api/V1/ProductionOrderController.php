@@ -9,19 +9,29 @@ use App\Domain\Production\ProductionWorkflow;
 use App\Http\Controllers\Controller;
 use App\Models\ProductionBatch;
 use App\Support\IdempotentAction;
+use App\Support\ServerDataTable;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\Response;
 
 final class ProductionOrderController extends Controller
 {
-    public function index(Request $request, TenantContext $tenant): JsonResponse
+    public function index(Request $request, TenantContext $tenant, ServerDataTable $table): Response
     {
-        return response()->json(ProductionBatch::query()
-            ->where('organization_id', $tenant->organization->id)
-            ->where('branch_id', $tenant->branch->id)
-            ->with('order')->latest('id')->paginate(min($request->integer('per_page', 20), 100)));
+        return $table->respond(
+            ProductionBatch::query()
+                ->where('organization_id', $tenant->organization->id)
+                ->where('branch_id', $tenant->branch->id)
+                ->with(['order', 'recipe.product']),
+            $request,
+            [],
+            ['id' => 'id', 'status' => 'status', 'planned_quantity' => 'planned_quantity', 'started_at' => 'started_at', 'completed_at' => 'completed_at'],
+            ['status' => 'status', 'order_id' => 'order_id', 'recipe_id' => 'recipe_id'],
+            ['ID' => 'id', 'Pedido' => 'order_id', 'Producto' => 'recipe.product.name', 'Estado' => 'status', 'Planificado' => 'planned_quantity', 'Rendimiento' => 'actual_yield', 'Unidad' => 'unit', 'Inicio' => 'started_at', 'Fin' => 'completed_at'],
+            'ordenes-produccion',
+        );
     }
 
     public function store(Request $request, ProductionWorkflow $workflow, IdempotentAction $keys, TenantContext $tenant): JsonResponse

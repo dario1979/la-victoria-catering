@@ -7,24 +7,29 @@ use App\Http\Requests\Api\V1\SaveCustomerRequest;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Support\Decimal;
+use App\Support\ServerDataTable;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 final class CustomerController extends Controller
 {
-    public function index(Request $request, TenantContext $tenant): JsonResponse
+    public function index(Request $request, TenantContext $tenant, ServerDataTable $table): Response
     {
         abort_unless($tenant->can('owner', 'admin', 'sales', 'finance'), 403);
-        $search = trim((string) $request->query('search'));
-        $customers = Customer::query()->where('organization_id', $tenant->organization->id)
-            ->when($search, fn ($query) => $query->where(
-                fn ($nested) => $nested->where('name', 'like', "%{$search}%")
-                    ->orWhere('tax_id', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-            ))->orderBy('name')->paginate(min($request->integer('per_page', 20), 100));
 
-        return response()->json($customers);
+        return $table->respond(
+            Customer::query()->where('organization_id', $tenant->organization->id),
+            $request,
+            ['name', 'tax_id', 'email', 'phone'],
+            ['id' => 'id', 'name' => 'name', 'email' => 'email', 'created_at' => 'created_at'],
+            ['active' => 'active', 'tax_condition' => 'tax_condition'],
+            ['ID' => 'id', 'Nombre' => 'name', 'CUIT' => 'tax_id', 'Correo' => 'email', 'Teléfono' => 'phone', 'Activo' => 'active'],
+            'clientes',
+            'name',
+            'asc',
+        );
     }
 
     public function store(SaveCustomerRequest $request, TenantContext $tenant): JsonResponse

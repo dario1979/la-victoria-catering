@@ -5,20 +5,27 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\SaveProductRequest;
 use App\Models\Product;
+use App\Support\ServerDataTable;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 final class ProductController extends Controller
 {
-    public function index(Request $request, TenantContext $tenant): JsonResponse
+    public function index(Request $request, TenantContext $tenant, ServerDataTable $table): Response
     {
-        $search = trim((string) $request->query('search'));
-        $products = Product::query()->where('organization_id', $tenant->organization->id)
-            ->when($search, fn ($query) => $query->where('name', 'like', "%{$search}%"))
-            ->orderBy('name')->paginate(min($request->integer('per_page', 20), 100));
-
-        return response()->json($products);
+        return $table->respond(
+            Product::query()->where('organization_id', $tenant->organization->id),
+            $request,
+            ['name', 'type', 'unit'],
+            ['id' => 'id', 'name' => 'name', 'type' => 'type', 'price' => 'price', 'created_at' => 'created_at'],
+            ['active' => 'active', 'type' => 'type', 'unit' => 'unit'],
+            ['ID' => 'id', 'Nombre' => 'name', 'Tipo' => 'type', 'Unidad' => 'unit', 'Precio' => 'price', 'Stock mínimo' => 'minimum_stock', 'Activo' => 'active'],
+            'productos',
+            'name',
+            'asc',
+        );
     }
 
     public function store(SaveProductRequest $request, TenantContext $tenant): JsonResponse

@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Support\Decimal;
 use App\Support\IdempotentAction;
+use App\Support\ServerDataTable;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,18 +15,24 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\Response;
 
 final class PaymentController extends Controller
 {
-    public function index(Request $request, TenantContext $tenant): JsonResponse
+    public function index(Request $request, TenantContext $tenant, ServerDataTable $table): Response
     {
-        $payments = Payment::query()->whereHas('order', fn ($query) => $query
-            ->where('organization_id', $tenant->organization->id)
-            ->where('branch_id', $tenant->branch->id))
-            ->when($request->filled('order_id'), fn ($query) => $query->where('order_id', $request->integer('order_id')))
-            ->with('order')->latest('id')->paginate(min($request->integer('per_page', 20), 100));
-
-        return response()->json($payments);
+        return $table->respond(
+            Payment::query()->whereHas('order', fn ($query) => $query
+                ->where('organization_id', $tenant->organization->id)
+                ->where('branch_id', $tenant->branch->id))
+                ->with('order'),
+            $request,
+            ['external_reference'],
+            ['id' => 'id', 'order_id' => 'order_id', 'amount' => 'amount', 'method' => 'method', 'created_at' => 'created_at'],
+            ['order_id' => 'order_id', 'method' => 'method'],
+            ['ID' => 'id', 'Pedido' => 'order_id', 'Cliente' => 'order.customer_name', 'Importe' => 'amount', 'Medio' => 'method', 'Referencia' => 'external_reference', 'Fecha' => 'created_at'],
+            'pagos',
+        );
     }
 
     public function show(Payment $payment, TenantContext $tenant): JsonResponse

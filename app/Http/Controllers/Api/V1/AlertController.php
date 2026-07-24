@@ -5,23 +5,28 @@ namespace App\Http\Controllers\Api\V1;
 use App\Domain\Alerts\AlertManager;
 use App\Http\Controllers\Controller;
 use App\Models\Alert;
+use App\Support\ServerDataTable;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 final class AlertController extends Controller
 {
-    public function index(Request $request, TenantContext $tenant): JsonResponse
+    public function index(Request $request, TenantContext $tenant, ServerDataTable $table): Response
     {
-        $alerts = Alert::query()
-            ->where('organization_id', $tenant->organization->id)
-            ->where(fn ($query) => $query->whereNull('branch_id')->orWhere('branch_id', $tenant->branch->id))
-            ->when($request->filled('severity'), fn ($query) => $query->where('severity', $request->query('severity')))
-            ->when($request->filled('status'), fn ($query) => $query->where('status', $request->query('status')))
-            ->when($request->filled('event'), fn ($query) => $query->where('event', $request->query('event')))
-            ->latest('last_seen_at')->paginate(min($request->integer('per_page', 20), 100));
-
-        return response()->json($alerts);
+        return $table->respond(
+            Alert::query()
+                ->where('organization_id', $tenant->organization->id)
+                ->where(fn ($query) => $query->whereNull('branch_id')->orWhere('branch_id', $tenant->branch->id)),
+            $request,
+            ['event', 'condition', 'expected_action'],
+            ['id' => 'id', 'event' => 'event', 'severity' => 'severity', 'status' => 'status', 'last_seen_at' => 'last_seen_at'],
+            ['severity' => 'severity', 'status' => 'status', 'event' => 'event'],
+            ['ID' => 'id', 'Evento' => 'event', 'Condición' => 'condition', 'Severidad' => 'severity', 'Estado' => 'status', 'Acción esperada' => 'expected_action', 'Última detección' => 'last_seen_at'],
+            'alertas',
+            'last_seen_at',
+        );
     }
 
     public function show(Alert $alert, TenantContext $tenant): JsonResponse

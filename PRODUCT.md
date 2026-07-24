@@ -40,14 +40,17 @@ tablet. Las cantidades, estados y vencimientos importan más que la decoración.
 ## Brand Commitments
 
 La marca y el nombre visible son **La Victoria Bakery**. El usuario comercial es
-`lavictoria.bakery`. La personalidad es cálida, artesanal, familiar, confiable,
-limpia y moderna sin adoptar apariencia de SaaS genérico.
+`lavictoria.bakery`. La personalidad es cálida, artesanal, familiar, botánica,
+delicada y cercana, con una operación moderna y confiable. El carácter manual
+se expresa con moderación y sin adoptar apariencia de SaaS genérico.
 
 ## Evidence on Hand
 
-El repositorio no contiene el logo botánico mencionado en el brief. Se conserva
-un monograma tipográfico `LV` como marcador neutral hasta recibir el asset real;
-no debe presentarse como un logotipo nuevo.
+El logo raster oficial está en
+`resources/js/assets/brand/la-victoria-bakery-logo.png`. Su resolución aproximada
+de 150 × 150 px permite usarlo en acceso, navegación y cabeceras pequeñas, sin
+ampliarlo agresivamente. El texto pequeño de la imagen no se considera una
+fuente de datos comerciales porque su legibilidad y vigencia no están confirmadas.
 
 ## Product Principles
 

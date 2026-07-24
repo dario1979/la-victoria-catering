@@ -8,25 +8,31 @@ use App\Models\Customer;
 use App\Models\Order;
 use App\Support\Decimal;
 use App\Support\IdempotentAction;
+use App\Support\ServerDataTable;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\Response;
 
 final class OrderController extends Controller
 {
-    public function index(Request $request, TenantContext $tenant): JsonResponse
+    public function index(Request $request, TenantContext $tenant, ServerDataTable $table): Response
     {
-        $orders = Order::query()
-            ->where('organization_id', $tenant->organization->id)
-            ->where('branch_id', $tenant->branch->id)
-            ->when($request->filled('status'), fn ($query) => $query->where('status', $request->query('status')))
-            ->when($request->filled('search'), fn ($query) => $query->where('customer_name', 'like', '%'.trim($request->query('search')).'%'))
-            ->with('items')->latest('id')->paginate(min($request->integer('per_page', 20), 100));
-
-        return response()->json($orders);
+        return $table->respond(
+            Order::query()
+                ->where('organization_id', $tenant->organization->id)
+                ->where('branch_id', $tenant->branch->id)
+                ->with('items'),
+            $request,
+            ['customer_name'],
+            ['id' => 'id', 'customer_name' => 'customer_name', 'status' => 'status', 'total' => 'total', 'required_at' => 'required_at', 'created_at' => 'created_at'],
+            ['status' => 'status', 'customer_id' => 'customer_id', 'delivery_method' => 'delivery_method'],
+            ['ID' => 'id', 'Cliente' => 'customer_name', 'Estado' => 'status', 'Total' => 'total', 'Pagado' => 'paid_total', 'Fecha requerida' => 'required_at', 'Entrega' => 'delivery_method'],
+            'pedidos',
+        );
     }
 
     public function store(Request $request, IdempotentAction $idempotency): JsonResponse

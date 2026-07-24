@@ -53,7 +53,9 @@ La revisión independiente detectó y permitió corregir antes del cierre:
 
 ## Límites reales
 
-- El repositorio no contiene el logo botánico oficial; se usa un monograma neutral.
+- El logo botánico raster oficial está integrado en acceso y navegación a tamaño
+  contenido; siguen pendientes SVG, PNG transparente de alta resolución, versión
+  horizontal, isotipo simplificado e iconos específicos para PWA y favicon.
 - La auditoría URL de Impeccable requiere `puppeteer`, que no se agregó como
   dependencia pesada. El detector estático y el build Docker sí se ejecutaron.
 - Requerimientos y trazabilidad aún usan una representación JSON técnica; deben

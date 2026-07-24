@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { api, errorMessages, HttpError, idempotencyKey } from '../api';
+import brandLogo from '../assets/brand/la-victoria-bakery-logo.png';
 import { useSessionStore } from '../stores/session';
 import type { CreateOrderInput, Order, OrderStatus, Payment, View } from '../types';
+import type { DataTableColumn, DataTableFilter } from '../types';
+import ServerDataTable from './data-table/ServerDataTable.vue';
 import DataState from './ui/DataState.vue';
 import MetricBlock from './ui/MetricBlock.vue';
 import StatusBadge from './ui/StatusBadge.vue';
@@ -22,6 +25,7 @@ const dashboardAlerts = ref<Record<string, unknown>[]>([]);
 const moduleRows = ref<Record<string, unknown>[]>([]);
 const productionRequirements = ref<Record<string, unknown> | null>(null);
 const productionTraceability = ref<Record<string, unknown> | null>(null);
+const operationalTable = ref<InstanceType<typeof ServerDataTable> | null>(null);
 const loginForm = reactive({ email: 'admin@lavictoria.test', password: '' });
 const orderForm = reactive({
     customer_name: '',
@@ -83,6 +87,88 @@ const pageDescription = computed(() => ({
     payments: 'Registro seguro y seguimiento de cobranzas.',
     alerts: 'Situaciones que requieren revisión o acción.',
 })[view.value]);
+const tableEndpoints: Partial<Record<View, string>> = {
+    customers: '/customers',
+    products: '/products',
+    lots: '/lots',
+    orders: '/orders',
+    production: '/production-orders',
+    payments: '/payments',
+    alerts: '/alerts',
+};
+const columnsByView: Partial<Record<View, DataTableColumn[]>> = {
+    customers: [
+        { key: 'id', label: 'ID', sortable: true },
+        { key: 'name', label: 'Cliente', sortable: true },
+        { key: 'email', label: 'Correo', sortable: true },
+        { key: 'phone', label: 'Teléfono' },
+        { key: 'active', label: 'Estado', render: (row) => row.active ? 'Activo' : 'Inactivo' },
+    ],
+    products: [
+        { key: 'id', label: 'ID', sortable: true },
+        { key: 'name', label: 'Producto', sortable: true },
+        { key: 'type', label: 'Tipo', sortable: true },
+        { key: 'unit', label: 'Unidad' },
+        { key: 'price', label: 'Precio', sortable: true, align: 'end', render: (row) => money(String(row.price ?? '0')) },
+    ],
+    lots: [
+        { key: 'id', label: 'ID', sortable: true },
+        { key: 'code', label: 'Lote', sortable: true },
+        { key: 'product.name', label: 'Producto' },
+        { key: 'location.name', label: 'Ubicación' },
+        { key: 'quantity', label: 'Disponible', sortable: true, align: 'end' },
+        { key: 'expires_at', label: 'Vencimiento', sortable: true },
+        { key: 'status', label: 'Estado', sortable: true },
+    ],
+    orders: [
+        { key: 'id', label: 'Pedido', sortable: true, render: (row) => `#${row.id}` },
+        { key: 'customer_name', label: 'Cliente', sortable: true },
+        { key: 'status', label: 'Estado', sortable: true },
+        { key: 'total', label: 'Total', sortable: true, align: 'end', render: (row) => money(String(row.total ?? '0')) },
+        { key: 'paid_total', label: 'Pagado', align: 'end', render: (row) => money(String(row.paid_total ?? '0')) },
+        { key: 'required_at', label: 'Fecha requerida', sortable: true },
+    ],
+    production: [
+        { key: 'id', label: 'Orden', sortable: true, render: (row) => `#${row.id}` },
+        { key: 'order_id', label: 'Pedido' },
+        { key: 'recipe.product.name', label: 'Producto' },
+        { key: 'planned_quantity', label: 'Planificado', sortable: true, align: 'end' },
+        { key: 'actual_yield', label: 'Rendimiento', align: 'end' },
+        { key: 'status', label: 'Estado', sortable: true },
+    ],
+    payments: [
+        { key: 'id', label: 'Pago', sortable: true, render: (row) => `#${row.id}` },
+        { key: 'order_id', label: 'Pedido', sortable: true, render: (row) => `#${row.order_id}` },
+        { key: 'order.customer_name', label: 'Cliente' },
+        { key: 'amount', label: 'Importe', sortable: true, align: 'end', render: (row) => money(String(row.amount ?? '0')) },
+        { key: 'method', label: 'Medio', sortable: true },
+        { key: 'created_at', label: 'Fecha', sortable: true },
+    ],
+    alerts: [
+        { key: 'id', label: 'Alerta', sortable: true, render: (row) => `#${row.id}` },
+        { key: 'event', label: 'Evento', sortable: true },
+        { key: 'expected_action', label: 'Acción esperada' },
+        { key: 'severity', label: 'Severidad', sortable: true },
+        { key: 'status', label: 'Estado', sortable: true },
+        { key: 'last_seen_at', label: 'Última detección', sortable: true },
+    ],
+};
+const filtersByView: Partial<Record<View, DataTableFilter[]>> = {
+    customers: [{ key: 'active', label: 'Estado', options: [{ label: 'Activos', value: '1' }, { label: 'Inactivos', value: '0' }] }],
+    products: [
+        { key: 'active', label: 'Estado', options: [{ label: 'Activos', value: '1' }, { label: 'Inactivos', value: '0' }] },
+        { key: 'type', label: 'Tipo', options: [{ label: 'Materia prima', value: 'raw_material' }, { label: 'Semielaborado', value: 'semi_finished' }, { label: 'Terminado', value: 'finished_product' }, { label: 'Empaque', value: 'packaging' }] },
+    ],
+    orders: [{ key: 'status', label: 'Estado', options: ['draft', 'confirmed', 'in_production', 'ready', 'delivered', 'cancelled'].map((value) => ({ label: statusLabel(value as OrderStatus), value })) }],
+    payments: [{ key: 'method', label: 'Medio', options: [{ label: 'Efectivo', value: 'cash' }, { label: 'Transferencia', value: 'transfer' }, { label: 'Mercado Pago', value: 'mercadopago' }, { label: 'Tarjeta', value: 'card' }] }],
+    alerts: [
+        { key: 'severity', label: 'Severidad', options: ['low', 'medium', 'high', 'critical'].map((value) => ({ label: value, value })) },
+        { key: 'status', label: 'Estado', options: ['open', 'acknowledged', 'resolved'].map((value) => ({ label: value, value })) },
+    ],
+};
+const tableEndpoint = computed(() => tableEndpoints[view.value] ?? '/orders');
+const tableColumns = computed<DataTableColumn[]>(() => columnsByView[view.value] ?? []);
+const tableFilters = computed<DataTableFilter[]>(() => filtersByView[view.value] ?? []);
 const outstanding = computed(() => centsToDecimal(recentOrders.value.reduce(
     (sum, order) => sum + decimalToCents(order.total) - decimalToCents(order.paid_total),
     0n,
@@ -97,7 +183,7 @@ function navigate(target: View) {
     errors.value = [];
     notice.value = '';
     history.replaceState(null, '', target === 'dashboard' ? '/' : `/#${target}`);
-    void loadView(target);
+    if (target === 'dashboard') void loadView(target);
 }
 
 async function loadView(target: View) {
@@ -119,24 +205,17 @@ async function loadView(target: View) {
         });
         return;
     }
-    const endpoints: Partial<Record<View, string>> = {
-        customers: '/customers',
-        products: '/products',
-        lots: '/lots',
-        orders: '/orders',
-        production: '/production-orders',
-        payments: '/payments',
-        alerts: '/alerts',
-    };
-    const endpoint = endpoints[target];
-    if (!endpoint) return;
-    await run(async () => {
-        const rows = await api.get<Record<string, unknown>[]>(endpoint);
-        if (sequence !== loadSequence || view.value !== target) return;
-        moduleRows.value = rows;
-        if (target === 'orders') recentOrders.value = rows as unknown as Order[];
-        if (target === 'payments') recentPayments.value = rows as unknown as Payment[];
-    });
+    return;
+}
+
+function handleTableLoaded(rows: Record<string, unknown>[]) {
+    moduleRows.value = rows;
+    if (view.value === 'orders') recentOrders.value = rows as unknown as Order[];
+    if (view.value === 'payments') recentPayments.value = rows as unknown as Payment[];
+}
+
+function refreshTable() {
+    operationalTable.value?.refresh();
 }
 
 async function changeBranch(event: Event) {
@@ -151,7 +230,11 @@ async function changeBranch(event: Event) {
     productionRequirements.value = null;
     productionTraceability.value = null;
     notice.value = `Sucursal activa: ${session.branch}.`;
-    await loadView(view.value);
+    if (view.value === 'dashboard') await loadView(view.value);
+    else {
+        await nextTick();
+        refreshTable();
+    }
 }
 
 function logIn() {
@@ -205,6 +288,7 @@ function createOrder() {
         orderKey = idempotencyKey('order');
         orderForm.customer_name = '';
         notice.value = `Pedido #${created.id} creado correctamente.`;
+        refreshTable();
     });
 }
 
@@ -242,6 +326,7 @@ function createPayment() {
         paymentForm.amount = '0.00';
         paymentForm.external_reference = '';
         notice.value = `Pago #${created.id} registrado correctamente.`;
+        refreshTable();
     });
 }
 
@@ -250,7 +335,7 @@ function createCustomer() {
         await api.post('/customers', customerForm);
         customerForm.name = '';
         customerForm.email = '';
-        await loadView('customers');
+        refreshTable();
         notice.value = 'Cliente creado.';
     });
 }
@@ -259,7 +344,7 @@ function createProduct() {
     return run(async () => {
         await api.post('/products', productForm);
         productForm.name = '';
-        await loadView('products');
+        refreshTable();
         notice.value = 'Producto creado.';
     });
 }
@@ -270,7 +355,7 @@ function adjustLot() {
             ...lotForm, expires_at: lotForm.expires_at || undefined,
         }, lotKey);
         lotKey = idempotencyKey('lot');
-        await loadView('lots');
+        refreshTable();
         notice.value = 'Movimiento de stock registrado.';
     });
 }
@@ -283,7 +368,7 @@ function createProduction() {
         }, productionKey);
         productionForm.id = created.id;
         productionKey = idempotencyKey('production');
-        await loadView('production');
+        refreshTable();
         notice.value = `Producción #${created.id} creada.`;
     });
 }
@@ -305,7 +390,7 @@ function productionAction(action: 'start' | 'complete') {
             : {};
         await api.post(`/production-orders/${productionForm.id}/${action}`, body, productionActionKey);
         productionActionKey = idempotencyKey('production-action');
-        await loadView('production');
+        refreshTable();
         notice.value = action === 'start' ? 'Producción iniciada.' : 'Producción completada.';
     });
 }
@@ -330,7 +415,7 @@ function deliverOrder() {
             method: deliveryForm.method, notes: deliveryForm.notes || undefined,
         }, deliveryKey);
         deliveryKey = idempotencyKey('delivery');
-        await loadView('orders');
+        refreshTable();
         notice.value = `Pedido #${deliveryForm.order_id} entregado.`;
     });
 }
@@ -338,7 +423,7 @@ function deliverOrder() {
 function resolveAlert() {
     return run(async () => {
         await api.post(`/alerts/${alertForm.id}/resolve`, {});
-        await loadView('alerts');
+        refreshTable();
         notice.value = `Alerta #${alertForm.id} resuelta.`;
     });
 }
@@ -414,14 +499,14 @@ onBeforeUnmount(() => {
 
 <template>
     <main v-if="recoveringSession" class="session-recovery" aria-live="polite">
-        <span class="brand-mark" aria-hidden="true">LV</span>
+        <img class="recovery-logo" :src="brandLogo" alt="">
         <strong>Recuperando tu mesa de trabajo…</strong>
         <p>Estamos comprobando la sesión y la sucursal activa.</p>
     </main>
 
     <main v-else-if="!session.authenticated" class="login-page">
         <section class="login-intro" aria-label="La Victoria Bakery">
-            <span class="login-monogram" aria-hidden="true">LV</span>
+            <img class="login-logo" :src="brandLogo" alt="">
             <div>
                 <p class="brand-name">La Victoria Bakery</p>
                 <p>Pedidos, producción, inventario y cobranzas en una sola mesa operativa.</p>
@@ -448,7 +533,7 @@ onBeforeUnmount(() => {
 
     <div v-else class="app-layout">
         <aside class="sidebar">
-            <div class="brand"><span aria-hidden="true">LV</span><div>La Victoria<small>Bakery · Operaciones</small></div></div>
+            <div class="brand"><img class="brand-logo" :src="brandLogo" alt=""><div>La Victoria<small>Bakery · Operaciones</small></div></div>
             <nav aria-label="Navegación principal">
                 <button
                     v-for="item in navigation"
@@ -536,10 +621,19 @@ onBeforeUnmount(() => {
                     </form>
                 </div>
                 <div class="panel full">
-                    <div class="panel-head"><h3>Pedidos de esta sesión</h3></div>
-                    <div v-if="recentOrders.length" class="table-wrap"><table><thead><tr><th>ID</th><th>Cliente</th><th>Estado</th><th>Total</th><th>Pagado</th></tr></thead><tbody>
-                        <tr v-for="order in recentOrders" :key="order.id"><td data-label="Pedido">#{{ order.id }}</td><td data-label="Cliente">{{ order.customer_name }}</td><td data-label="Estado"><StatusBadge :status="order.status" /></td><td data-label="Total" class="numeric">{{ money(order.total) }}</td><td data-label="Pagado" class="numeric">{{ money(order.paid_total) }}</td></tr>
-                    </tbody></table></div><p v-else class="empty">Los pedidos creados aparecerán acá.</p>
+                    <div class="panel-head"><h3>Pedidos</h3></div>
+                    <ServerDataTable
+                        ref="operationalTable"
+                        endpoint="/orders"
+                        :columns="tableColumns"
+                        :filters="tableFilters"
+                        initial-sort="id"
+                        persist-in-url
+                        @loaded="handleTableLoaded"
+                        @error="errors = $event"
+                    >
+                        <template #cell-status="{ row }"><StatusBadge :status="String(row.status)" /></template>
+                    </ServerDataTable>
                 </div>
             </section>
 
@@ -554,16 +648,23 @@ onBeforeUnmount(() => {
                         <button class="primary" :disabled="busy || !online">Registrar pago</button>
                     </form>
                 </div>
-                <div class="panel"><div class="panel-head"><h3>Pagos de esta sesión</h3></div>
-                    <ul v-if="recentPayments.length" class="activity-list"><li v-for="payment in recentPayments" :key="payment.id"><div><strong>{{ money(payment.amount) }}</strong><span>Pedido #{{ payment.order_id }} · {{ payment.method }}</span></div><small>#{{ payment.id }}</small></li></ul>
-                    <p v-else class="empty">Todavía no registraste pagos.</p>
+                <div class="panel full"><div class="panel-head"><h3>Pagos</h3></div>
+                    <ServerDataTable
+                        ref="operationalTable"
+                        endpoint="/payments"
+                        :columns="tableColumns"
+                        :filters="tableFilters"
+                        initial-sort="id"
+                        persist-in-url
+                        @loaded="handleTableLoaded"
+                        @error="errors = $event"
+                    />
                 </div>
             </section>
 
             <section v-else class="page module-page">
                 <div class="module-heading">
                     <div><p class="section-kicker">Sucursal · {{ session.branch }}</p><h2>{{ pageTitle }}</h2><p>{{ pageDescription }}</p></div>
-                    <button class="secondary" :disabled="busy || !online" @click="loadView(view)">Actualizar datos</button>
                 </div>
                 <div class="operational-grid">
                     <div class="task-panel">
@@ -635,21 +736,19 @@ onBeforeUnmount(() => {
                     </form>
                     </div>
                     <div class="data-panel">
-                    <DataState v-if="busy && !moduleRows.length" title="Cargando datos" message="Consultando la información más reciente de la sucursal." />
-                    <DataState v-else-if="!moduleRows.length" title="Sin registros" :message="`No hay ${pageTitle.toLowerCase()} para mostrar en esta sucursal.`" action="Actualizar" @activate="loadView(view)" />
-                    <div v-else class="table-wrap">
-                        <table>
-                            <thead><tr><th>ID</th><th>Registro</th><th>Detalle operativo</th><th>Estado</th></tr></thead>
-                            <tbody>
-                                <tr v-for="row in moduleRows" :key="String(row.id)">
-                                    <td data-label="ID">#{{ row.id }}</td>
-                                    <td data-label="Registro">{{ rowPrimary(row) }}</td>
-                                    <td data-label="Detalle">{{ rowDetail(row) }}</td>
-                                    <td data-label="Estado"><StatusBadge :status="String(row.status ?? row.type ?? 'active')" /></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    <ServerDataTable
+                        :key="tableEndpoint"
+                        ref="operationalTable"
+                        :endpoint="tableEndpoint"
+                        :columns="tableColumns"
+                        :filters="tableFilters"
+                        initial-sort="id"
+                        persist-in-url
+                        @loaded="handleTableLoaded"
+                        @error="errors = $event"
+                    >
+                        <template #cell-status="{ row }"><StatusBadge :status="String(row.status ?? 'active')" /></template>
+                    </ServerDataTable>
                     </div>
                 </div>
             </section>

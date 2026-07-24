@@ -6,23 +6,33 @@ use App\Domain\Inventory\AdjustStock;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\AdjustStockRequest;
 use App\Models\InventoryLot;
+use App\Support\ServerDataTable;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 final class LotController extends Controller
 {
-    public function index(Request $request, TenantContext $tenant): JsonResponse
+    public function index(Request $request, TenantContext $tenant, ServerDataTable $table): Response
     {
-        $lots = InventoryLot::query()
+        $query = InventoryLot::query()
             ->whereHas('location', fn ($query) => $query
                 ->where('organization_id', $tenant->organization->id)
                 ->where('branch_id', $tenant->branch->id))
-            ->when($request->filled('product_id'), fn ($query) => $query->where('product_id', $request->integer('product_id')))
-            ->orderByRaw('expires_at IS NULL')->orderBy('expires_at')
-            ->paginate(min($request->integer('per_page', 20), 100));
+            ->with(['product', 'location']);
 
-        return response()->json($lots);
+        return $table->respond(
+            $query,
+            $request,
+            ['code'],
+            ['id' => 'id', 'code' => 'code', 'quantity' => 'quantity', 'expires_at' => 'expires_at', 'status' => 'status'],
+            ['product_id' => 'product_id', 'location_id' => 'location_id', 'status' => 'status'],
+            ['ID' => 'id', 'Código' => 'code', 'Producto' => 'product.name', 'Ubicación' => 'location.name', 'Cantidad' => 'quantity', 'Reservado' => 'reserved_quantity', 'Unidad' => 'unit', 'Vencimiento' => 'expires_at', 'Estado' => 'status'],
+            'lotes',
+            'expires_at',
+            'asc',
+        );
     }
 
     public function show(InventoryLot $lot, TenantContext $tenant): JsonResponse

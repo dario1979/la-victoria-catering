@@ -13,8 +13,8 @@ export default defineConfig({
             manifest: {
                 name: 'La Victoria Bakery',
                 short_name: 'La Victoria',
-                theme_color: '#7f1d1d',
-                background_color: '#fffaf0',
+                theme_color: '#5f6252',
+                background_color: '#fffdf9',
                 display: 'standalone',
                 icons: [],
             },

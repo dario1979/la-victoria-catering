@@ -6,22 +6,27 @@ use App\Domain\Production\RecipeManager;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\SaveRecipeRequest;
 use App\Models\Recipe;
+use App\Support\ServerDataTable;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 final class RecipeController extends Controller
 {
-    public function index(Request $request, TenantContext $tenant): JsonResponse
+    public function index(Request $request, TenantContext $tenant, ServerDataTable $table): Response
     {
-        $recipes = Recipe::query()->whereHas('product', fn ($query) => $query
-            ->where('organization_id', $tenant->organization->id))
-            ->when($request->filled('product_id'), fn ($query) => $query
-                ->where('product_id', $request->integer('product_id')))
-            ->with(['product', 'items.ingredient'])->latest('id')
-            ->paginate(min($request->integer('per_page', 20), 100));
-
-        return response()->json($recipes);
+        return $table->respond(
+            Recipe::query()->whereHas('product', fn ($query) => $query
+                ->where('organization_id', $tenant->organization->id))
+                ->with(['product', 'items.ingredient']),
+            $request,
+            [],
+            ['id' => 'id', 'version' => 'version', 'status' => 'status', 'yield_quantity' => 'yield_quantity', 'created_at' => 'created_at'],
+            ['product_id' => 'product_id', 'status' => 'status'],
+            ['ID' => 'id', 'Producto' => 'product.name', 'Versión' => 'version', 'Estado' => 'status', 'Rendimiento' => 'yield_quantity', 'Unidad' => 'yield_unit', 'Creada' => 'created_at'],
+            'recetas',
+        );
     }
 
     public function store(

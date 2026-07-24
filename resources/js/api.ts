@@ -1,4 +1,4 @@
-import type { ApiEnvelope, ApiProblem } from './types';
+import type { ApiEnvelope, ApiProblem, DataTableQuery, DataTableResponse } from './types';
 
 let csrfToken = '';
 let organizationId: number | null = null;
@@ -68,6 +68,49 @@ async function request<T>(
 export const api = {
     get<T>(path: string) {
         return request<ApiEnvelope<T>>(path).then((response) => response.data);
+    },
+    page<T>(path: string, query: DataTableQuery) {
+        const params = new URLSearchParams({
+            page: String(query.page),
+            per_page: String(query.per_page),
+            search: query.search,
+            sort: query.sort,
+            direction: query.direction,
+        });
+        Object.entries(query.filters).forEach(([key, value]) => {
+            if (value !== '') params.set(`filters[${key}]`, value);
+        });
+
+        return request<DataTableResponse<T>>(`${path}?${params.toString()}`);
+    },
+    async exportTable(path: string, query: DataTableQuery) {
+        const params = new URLSearchParams({
+            search: query.search,
+            sort: query.sort,
+            direction: query.direction,
+            export: 'xlsx',
+        });
+        Object.entries(query.filters).forEach(([key, value]) => {
+            if (value !== '') params.set(`filters[${key}]`, value);
+        });
+        const headers = new Headers({ Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        if (organizationId && branchId) {
+            headers.set('X-Organization-ID', String(organizationId));
+            headers.set('X-Branch-ID', String(branchId));
+        }
+        const response = await fetch(`/api/v1${path}?${params.toString()}`, {
+            headers, credentials: 'same-origin', cache: 'no-store',
+        });
+        if (!response.ok) throw new HttpError({ message: 'No se pudo generar el Excel.', status: response.status, errors: {} });
+        const blob = await response.blob();
+        const disposition = response.headers.get('Content-Disposition') ?? '';
+        const filename = disposition.match(/filename="?([^";]+)"?/)?.[1] ?? 'exportacion.xlsx';
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = filename;
+        anchor.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
     },
     post<T>(path: string, body: unknown, idempotencyKey?: string) {
         return request<ApiEnvelope<T>>(

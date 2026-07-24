@@ -5,19 +5,29 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\SaveLocationRequest;
 use App\Models\Location;
+use App\Support\ServerDataTable;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 final class LocationController extends Controller
 {
-    public function index(TenantContext $tenant): JsonResponse
+    public function index(Request $request, TenantContext $tenant, ServerDataTable $table): Response
     {
-        $locations = Location::query()
-            ->where('organization_id', $tenant->organization->id)
-            ->where('branch_id', $tenant->branch->id)
-            ->orderBy('name')->get();
-
-        return response()->json(['data' => $locations]);
+        return $table->respond(
+            Location::query()
+                ->where('organization_id', $tenant->organization->id)
+                ->where('branch_id', $tenant->branch->id),
+            $request,
+            ['name'],
+            ['id' => 'id', 'name' => 'name', 'created_at' => 'created_at'],
+            ['active' => 'active'],
+            ['ID' => 'id', 'Nombre' => 'name', 'Activo' => 'active', 'Creado' => 'created_at'],
+            'ubicaciones',
+            'name',
+            'asc',
+        );
     }
 
     public function store(SaveLocationRequest $request, TenantContext $tenant): JsonResponse

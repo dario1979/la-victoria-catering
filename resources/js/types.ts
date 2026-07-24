@@ -72,6 +72,43 @@ export interface ApiEnvelope<T> {
     data: T;
 }
 
+export interface DataTableMeta {
+    current_page: number;
+    from: number | null;
+    last_page: number;
+    per_page: number;
+    to: number | null;
+    total: number;
+}
+
+export interface DataTableResponse<T> {
+    data: T[];
+    meta: DataTableMeta;
+}
+
+export interface DataTableQuery {
+    page: number;
+    per_page: number;
+    search: string;
+    sort: string;
+    direction: 'asc' | 'desc';
+    filters: Record<string, string>;
+}
+
+export interface DataTableColumn<T extends Record<string, unknown> = Record<string, unknown>> {
+    key: string;
+    label: string;
+    sortable?: boolean;
+    align?: 'start' | 'end';
+    render?: (row: T) => string;
+}
+
+export interface DataTableFilter {
+    key: string;
+    label: string;
+    options: Array<{ label: string; value: string }>;
+}
+
 export interface ApiProblem {
     message: string;
     status: number;

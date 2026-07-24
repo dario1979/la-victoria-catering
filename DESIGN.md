@@ -5,9 +5,10 @@
 ## Dirección
 
 **Obrador editorial operativo.** La interfaz toma la disciplina de una planilla
-de producción y la calidez material de una panadería, sin convertir cada dato en
-tarjeta. Los planos de fondo son papel cálido, la navegación usa tinta cacao y
-las acciones se apoyan en terracota y salvia.
+de producción y la calidez material de una panadería artesanal y familiar, sin
+convertir cada dato en tarjeta. Los planos de fondo son papel cálido, la
+navegación usa tinta y las acciones se apoyan en salvia y acentos durazno. La
+ilustración botánica queda concentrada en el logo y en puntos de identidad.
 
 ## Tipografía
 
@@ -17,9 +18,10 @@ las acciones se apoyan en terracota y salvia.
 
 ## Color
 
-- Papel: `#f5f0e7`; superficie: `#fffdf8`.
-- Tinta: `#2d211c`; tinta secundaria: `#695b52`.
-- Cacao: `#382019`; terracota: `#9b3f2e`; salvia: `#48634e`.
+- Marfil: `#f7eadb`; crema: `#efddcb`; papel: `#fffdf9`.
+- Durazno: `#eccfb7`; taupe: `#bfb09e`.
+- Salvia clara: `#a9ad97`; salvia: `#888b75`; salvia oscura: `#5f6252`.
+- Tinta: `#514337`.
 - Estados semánticos siempre combinan texto, etiqueta y color.
 
 ## Forma y densidad
@@ -45,5 +47,16 @@ movimiento se reduce cuando el sistema lo solicita.
 ## Restricciones
 
 No usar glassmorphism, gradientes violeta/azul, tarjetas anidadas, iconos
-decorativos, animación llamativa ni datos comerciales inventados. El monograma
-`LV` es provisional hasta incorporar el logo oficial existente fuera del repo.
+decorativos, animación llamativa, flores en todas las pantallas ni datos
+comerciales inventados. No redibujar, vectorizar ni ampliar el logo raster por
+encima de su tamaño natural.
+
+## Activos de marca pendientes
+
+Solicitar, sin bloquear el prototipo actual:
+
+- versión vectorial SVG;
+- PNG transparente de alta resolución;
+- versión horizontal;
+- isotipo simplificado;
+- icono específico para PWA y favicon.

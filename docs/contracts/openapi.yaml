@@ -48,7 +48,13 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Organization'
         - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
         - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Direction'
+        - $ref: '#/components/parameters/Filters'
+        - $ref: '#/components/parameters/Export'
       responses:
         '200': { $ref: '#/components/responses/Paginated' }
     post:
@@ -77,7 +83,16 @@ paths:
   /products:
     get:
       summary: Lista productos
-      parameters: [{ $ref: '#/components/parameters/Organization' }, { $ref: '#/components/parameters/Branch' }]
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Direction'
+        - $ref: '#/components/parameters/Filters'
+        - $ref: '#/components/parameters/Export'
       responses:
         '200': { $ref: '#/components/responses/Paginated' }
     post:
@@ -101,7 +116,16 @@ paths:
   /locations:
     get:
       summary: Lista ubicaciones de la sucursal activa
-      parameters: [{ $ref: '#/components/parameters/Organization' }, { $ref: '#/components/parameters/Branch' }]
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Direction'
+        - $ref: '#/components/parameters/Filters'
+        - $ref: '#/components/parameters/Export'
       responses:
         '200': { $ref: '#/components/responses/Ok' }
     post:
@@ -112,7 +136,16 @@ paths:
   /lots:
     get:
       summary: Lista lotes FEFO de la sucursal
-      parameters: [{ $ref: '#/components/parameters/Organization' }, { $ref: '#/components/parameters/Branch' }]
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Direction'
+        - $ref: '#/components/parameters/Filters'
+        - $ref: '#/components/parameters/Export'
       responses:
         '200': { $ref: '#/components/responses/Paginated' }
   /lots/{lot}:
@@ -137,7 +170,16 @@ paths:
   /orders:
     get:
       summary: Lista y filtra pedidos
-      parameters: [{ $ref: '#/components/parameters/Organization' }, { $ref: '#/components/parameters/Branch' }]
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Direction'
+        - $ref: '#/components/parameters/Filters'
+        - $ref: '#/components/parameters/Export'
       responses:
         '200': { $ref: '#/components/responses/Paginated' }
     post:
@@ -189,10 +231,42 @@ paths:
         - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         '200': { $ref: '#/components/responses/Ok' }
+  /recipes:
+    get:
+      summary: Lista y filtra versiones de recetas
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Direction'
+        - $ref: '#/components/parameters/Filters'
+        - $ref: '#/components/parameters/Export'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    post:
+      summary: Crea una versión de receta
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
   /production-orders:
     get:
       summary: Lista órdenes de producción
-      parameters: [{ $ref: '#/components/parameters/Organization' }, { $ref: '#/components/parameters/Branch' }]
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Direction'
+        - $ref: '#/components/parameters/Filters'
+        - $ref: '#/components/parameters/Export'
       responses:
         '200': { $ref: '#/components/responses/Paginated' }
     post:
@@ -235,7 +309,16 @@ paths:
   /payments:
     get:
       summary: Lista pagos por sucursal o pedido
-      parameters: [{ $ref: '#/components/parameters/Organization' }, { $ref: '#/components/parameters/Branch' }]
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Direction'
+        - $ref: '#/components/parameters/Filters'
+        - $ref: '#/components/parameters/Export'
       responses:
         '200': { $ref: '#/components/responses/Paginated' }
     post:
@@ -259,7 +342,16 @@ paths:
   /alerts:
     get:
       summary: Lista y filtra alertas operativas
-      parameters: [{ $ref: '#/components/parameters/Organization' }, { $ref: '#/components/parameters/Branch' }]
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Direction'
+        - $ref: '#/components/parameters/Filters'
+        - $ref: '#/components/parameters/Export'
       responses:
         '200': { $ref: '#/components/responses/Paginated' }
   /alerts/{alert}:
@@ -314,7 +406,35 @@ components:
     Search:
       name: search
       in: query
+      schema: { type: string, maxLength: 200 }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    PerPage:
+      name: per_page
+      in: query
+      schema: { type: integer, enum: [10, 20, 50, 100], default: 20 }
+    Sort:
+      name: sort
+      in: query
+      description: Clave de columna permitida por el recurso
       schema: { type: string }
+    Direction:
+      name: direction
+      in: query
+      schema: { type: string, enum: [asc, desc], default: desc }
+    Filters:
+      name: filters
+      in: query
+      style: deepObject
+      explode: true
+      schema: { type: object, additionalProperties: true }
+    Export:
+      name: export
+      in: query
+      description: Devuelve el mismo resultado filtrado como libro Excel
+      schema: { type: string, enum: [xlsx] }
     CustomerId:
       name: customer
       in: path
@@ -344,10 +464,31 @@ components:
         Idempotency-Replayed:
           schema: { type: boolean }
     Paginated:
-      description: Colección paginada
+      description: Colección paginada server-side con data y meta
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data, meta]
+            properties:
+              data: { type: array, items: { type: object, additionalProperties: true } }
+              meta: { $ref: '#/components/schemas/DataTableMeta' }
+        application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+          schema: { type: string, format: binary }
     ValidationError:
       description: Validación o regla de negocio incumplida
     Unauthenticated:
       description: Sesión ausente o vencida
     NotFound:
       description: Recurso inexistente o fuera del tenant activo
+  schemas:
+    DataTableMeta:
+      type: object
+      required: [current_page, from, last_page, per_page, to, total]
+      properties:
+        current_page: { type: integer, minimum: 1 }
+        from: { type: [integer, 'null'] }
+        last_page: { type: integer, minimum: 1 }
+        per_page: { type: integer, enum: [10, 20, 50, 100] }
+        to: { type: [integer, 'null'] }
+        total: { type: integer, minimum: 0 }
