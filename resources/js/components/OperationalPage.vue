@@ -26,6 +26,7 @@ const props = defineProps<{
     view: ModuleView;
     online: boolean;
     branchName: string;
+    role: string;
 }>();
 
 const emit = defineEmits<{ notice: [message: string]; error: [title: string, messages: string[]] }>();
@@ -251,31 +252,45 @@ const modalTitle = computed(() => {
 });
 const modalSize = computed(() => ['orders', 'recipes', 'production'].includes(props.view) || ['production-requirements', 'production-traceability'].includes(modal.mode) ? 'large' : 'wide');
 const isFormModal = computed(() => !['detail', 'production-requirements', 'production-traceability'].includes(modal.mode));
+const canCreate = computed(() => ({
+    customers: can('owner', 'admin', 'sales'),
+    products: can('owner', 'admin', 'inventory'),
+    locations: can('owner', 'admin', 'inventory'),
+    lots: can('owner', 'admin', 'inventory'),
+    orders: can('owner', 'admin', 'sales'),
+    recipes: can('owner', 'admin', 'production'),
+    production: can('owner', 'admin', 'production'),
+    payments: can('owner', 'admin', 'sales', 'finance'),
+    alerts: false,
+})[props.view]);
 
 function rowActions(row: Record<string, any>): DataTableRowAction[] {
     const actions: DataTableRowAction[] = [{ key: 'view', label: 'Ver detalle' }];
-    if (props.view === 'customers' || props.view === 'products') {
+    if (
+        (props.view === 'customers' && can('owner', 'admin', 'sales'))
+        || (props.view === 'products' && can('owner', 'admin', 'inventory'))
+    ) {
         actions.push({ key: 'edit', label: 'Editar' });
         actions.push({ key: 'toggle', label: row.active ? 'Desactivar' : 'Activar', tone: row.active ? 'danger' : 'default' });
     }
-    if (props.view === 'lots') actions.push({ key: 'adjust', label: 'Registrar ajuste' });
+    if (props.view === 'lots' && can('owner', 'admin', 'inventory')) actions.push({ key: 'adjust', label: 'Registrar ajuste' });
     if (props.view === 'orders') {
-        actions.push({ key: 'transition', label: 'Cambiar estado', disabled: ['delivered', 'cancelled'].includes(row.status) });
-        actions.push({ key: 'payment', label: 'Registrar pago', disabled: decimalSubtract(row.total, row.paid_total) === '0.00' });
-        actions.push({ key: 'delivery', label: 'Registrar entrega', disabled: row.status !== 'ready' });
+        if (can('owner', 'admin', 'sales', 'production')) actions.push({ key: 'transition', label: 'Cambiar estado', disabled: ['delivered', 'cancelled'].includes(row.status) });
+        if (can('owner', 'admin', 'sales', 'finance')) actions.push({ key: 'payment', label: 'Registrar pago', disabled: decimalSubtract(row.total, row.paid_total) === '0.00' });
+        if (can('owner', 'admin', 'sales')) actions.push({ key: 'delivery', label: 'Registrar entrega', disabled: row.status !== 'ready' });
     }
-    if (props.view === 'recipes') {
+    if (props.view === 'recipes' && can('owner', 'admin', 'production')) {
         actions.push({ key: row.status === 'approved' ? 'deactivate' : 'approve', label: row.status === 'approved' ? 'Desactivar' : 'Aprobar', tone: row.status === 'approved' ? 'danger' : 'default' });
     }
-    if (props.view === 'production') {
+    if (props.view === 'production' && can('owner', 'admin', 'production')) {
         actions.push({ key: 'requirements', label: 'Ver requerimientos' });
         actions.push({ key: 'traceability', label: 'Ver trazabilidad' });
         actions.push({ key: 'start', label: 'Iniciar producción', disabled: row.status !== 'planned' });
         actions.push({ key: 'complete', label: 'Completar producción', disabled: row.status !== 'in_progress' });
     }
     if (props.view === 'alerts') {
-        actions.push({ key: 'acknowledge', label: 'Reconocer', disabled: row.status !== 'open' });
-        actions.push({ key: 'resolve', label: 'Resolver', disabled: row.status === 'resolved' });
+        if (can('owner', 'admin', 'inventory', 'production', 'finance', 'purchasing')) actions.push({ key: 'acknowledge', label: 'Reconocer', disabled: row.status !== 'open' });
+        if (can('owner', 'admin', 'inventory', 'production', 'finance')) actions.push({ key: 'resolve', label: 'Resolver', disabled: row.status === 'resolved' });
     }
     return actions;
 }
@@ -291,6 +306,7 @@ function resetModalState() {
 }
 
 function openCreate(mode: ModalMode = 'create', row: Record<string, any> | null = null) {
+    if (mode === 'create' && !canCreate.value) return;
     resetModalState();
     modal.row = row;
     modal.mode = mode;
@@ -697,6 +713,10 @@ function activeOptions() {
     return [{ label: 'Activos', value: '1' }, { label: 'Inactivos', value: '0' }];
 }
 
+function can(...roles: string[]) {
+    return roles.includes(props.role);
+}
+
 function money(value: string | number) {
     return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(Number(value || 0));
 }
@@ -766,7 +786,7 @@ function recipeSelectionLabel(row: Record<string, unknown> | null) {
                 <h2>{{ content.title }}</h2>
                 <p>{{ content.description }}</p>
             </div>
-            <button v-if="content.action" class="primary" type="button" :disabled="!online" @click="openCreate()">{{ content.action }}</button>
+            <button v-if="content.action && canCreate" class="primary" type="button" :disabled="!online" @click="openCreate()">{{ content.action }}</button>
         </header>
 
         <ServerDataTable
@@ -777,7 +797,7 @@ function recipeSelectionLabel(row: Record<string, unknown> | null) {
             :filters="tableFilters"
             :label="`Listado de ${content.title.toLowerCase()}`"
             :empty-label="content.empty"
-            :empty-action="content.action"
+            :empty-action="canCreate ? content.action : ''"
             :highlighted-id="highlightedId"
             initial-sort="id"
             persist-in-url

@@ -43,6 +43,9 @@ const groups = ['Jornada', 'Comercial', 'Obrador', 'Inventario', 'Control'];
 const primaryMobile: View[] = ['dashboard', 'orders', 'production', 'alerts'];
 
 const pageTitle = computed(() => navigation.find((item) => item.id === view.value)?.label ?? 'Resumen');
+const activeRole = computed(() => session.user?.organizations.find(
+    (organization) => organization.id === session.organizationId,
+)?.pivot.role ?? '');
 const pageDescription = computed(() => ({
     dashboard: 'Prioridades y actividad de la sucursal activa.',
     customers: 'Relación comercial y datos de contacto.',
@@ -321,6 +324,7 @@ onBeforeUnmount(() => {
                 :view="view"
                 :online="online"
                 :branch-name="session.branch"
+                :role="activeRole"
                 @notice="showNotice"
                 @error="showError"
             />

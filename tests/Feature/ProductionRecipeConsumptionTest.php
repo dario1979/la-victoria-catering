@@ -181,6 +181,20 @@ class ProductionRecipeConsumptionTest extends TestCase
             ->assertJsonPath('data.ingredients.0.available_quantity', '0.000');
     }
 
+    public function test_recipe_detail_and_status_contracts_are_available(): void
+    {
+        $recipe = $this->createRecipe('1.000');
+
+        $this->getJson("/api/v1/recipes/{$recipe}")
+            ->assertOk()
+            ->assertJsonPath('data.product.name', 'Bread tray')
+            ->assertJsonPath('data.items.0.ingredient.name', 'Flour');
+
+        $this->patchJson("/api/v1/recipes/{$recipe}", ['status' => 'inactive'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'inactive');
+    }
+
     private function production(string $plannedQuantity): array
     {
         $recipe = $this->createRecipe('1.000');
