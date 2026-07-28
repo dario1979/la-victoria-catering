@@ -428,6 +428,26 @@ body.modal-open { overflow: hidden; }
 .login-card { align-self: center; width: min(500px, calc(100% - 2rem)); margin: auto; padding: clamp(1.5rem, 5vw, 3.5rem); }
 .login-card h1 { margin: var(--space-2) 0; font-family: var(--font-display); font-size: clamp(2.2rem, 4vw, 3.2rem); font-weight: 500; letter-spacing: -.03em; line-height: 1; }
 .login-card .message { margin: var(--space-4) 0; }
+.auth-form { margin-top: var(--space-5); }
+.auth-field { display: grid; gap: var(--space-1); min-width: 0; }
+.auth-field input { margin-top: 0; }
+.password-field { position: relative; min-width: 0; }
+.password-field input { padding-inline-end: 5.6rem; }
+.password-toggle {
+    position: absolute; inset-block: 0; inset-inline-end: 0; min-height: 44px; border: 0;
+    color: var(--terracotta-dark); background: transparent; padding-inline: .8rem; font-size: .76rem; font-weight: 750;
+}
+.password-toggle:hover { text-decoration: underline; text-underline-offset: 3px; }
+.auth-link {
+    justify-self: end; min-height: 44px; border: 0; color: var(--terracotta-dark);
+    background: transparent; padding: var(--space-2) 0; font-size: .82rem; font-weight: 750;
+}
+.auth-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.auth-link-centered { justify-self: center; }
+.auth-secondary-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2) var(--space-4); }
+.field-hint, .field-error { line-height: 1.45; }
+.field-hint { color: var(--ink-muted); }
+.field-error { color: var(--danger); }
 .helper { color: var(--ink-muted); font-size: .76rem; line-height: 1.5; }
 .session-recovery { display: grid; min-height: 100vh; place-content: center; justify-items: center; background: var(--paper); text-align: center; }
 .recovery-logo { display: block; width: 88px; height: auto; border-radius: 50%; object-fit: contain; }

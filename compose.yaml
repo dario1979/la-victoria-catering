@@ -8,10 +8,13 @@ x-backend: &backend
     - path: .env
       required: false
   environment:
+    APP_NAME: "${APP_NAME:-La Victoria Bakery}"
     APP_ENV: ${APP_ENV:-local}
     APP_KEY: ${APP_KEY:-}
     APP_DEBUG: ${APP_DEBUG:-false}
     APP_URL: ${APP_URL:-http://localhost:8080}
+    APP_LOCALE: ${APP_LOCALE:-es}
+    APP_FALLBACK_LOCALE: ${APP_FALLBACK_LOCALE:-es}
     DB_CONNECTION: ${DB_CONNECTION:-pgsql}
     DB_HOST: ${DB_HOST:-postgres}
     DB_PORT: ${DB_PORT:-5432}
@@ -26,6 +29,8 @@ x-backend: &backend
     MAIL_MAILER: ${MAIL_MAILER:-smtp}
     MAIL_HOST: ${MAIL_HOST:-mailpit}
     MAIL_PORT: ${MAIL_PORT:-1025}
+    MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-no-reply@la-victoria.local}
+    MAIL_FROM_NAME: "${MAIL_FROM_NAME:-La Victoria Bakery}"
     DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-123456}
   restart: unless-stopped
   depends_on:
@@ -71,10 +76,13 @@ services:
   backend:
     <<: *backend
     environment:
+      APP_NAME: "${APP_NAME:-La Victoria Bakery}"
       APP_ENV: ${APP_ENV:-local}
       APP_KEY: ${APP_KEY:-}
       APP_DEBUG: ${APP_DEBUG:-false}
       APP_URL: ${APP_URL:-http://localhost:8080}
+      APP_LOCALE: ${APP_LOCALE:-es}
+      APP_FALLBACK_LOCALE: ${APP_FALLBACK_LOCALE:-es}
       DB_CONNECTION: ${DB_CONNECTION:-pgsql}
       DB_HOST: ${DB_HOST:-postgres}
       DB_PORT: ${DB_PORT:-5432}
@@ -89,6 +97,8 @@ services:
       MAIL_MAILER: ${MAIL_MAILER:-smtp}
       MAIL_HOST: ${MAIL_HOST:-mailpit}
       MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-no-reply@la-victoria.local}
+      MAIL_FROM_NAME: "${MAIL_FROM_NAME:-La Victoria Bakery}"
       DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-123456}
       RUN_MIGRATIONS: "true"
     ports:

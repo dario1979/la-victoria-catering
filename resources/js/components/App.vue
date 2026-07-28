@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { api, errorMessages, HttpError } from '../api';
 import brandLogo from '../assets/brand/la-victoria-bakery-logo.png';
 import { formatDateTime } from '../dates';
 import { useSessionStore } from '../stores/session';
 import type { DashboardAlert, DashboardMetrics, DashboardSummary, Order, View } from '../types';
+import AuthPage from './AuthPage.vue';
 import DataState from './ui/DataState.vue';
 import BaseModal from './ui/BaseModal.vue';
 import MetricBlock from './ui/MetricBlock.vue';
@@ -33,7 +34,6 @@ const dashboardMetrics = ref<DashboardMetrics>({
     critical_stock: 0,
 });
 const mobileMenuOpen = ref(false);
-const loginForm = reactive({ email: 'admin@lavictoria.test', password: '' });
 let loadSequence = 0;
 
 const navigation: Array<{ id: View; label: string; icon: string; group: string }> = [
@@ -89,6 +89,7 @@ function navigate(target: View, updateHistory = true) {
 }
 
 function restoreHistoryView() {
+    if (!session.authenticated) return;
     const target = location.hash.replace('#', '') as View;
     navigate(validViews.includes(target) ? target : 'dashboard', false);
 }
@@ -124,12 +125,11 @@ async function changeBranch(event: Event) {
     if (view.value === 'dashboard') await loadDashboard();
 }
 
-function logIn() {
-    return run(async () => {
-        await session.login(loginForm.email, loginForm.password);
-        if (!visibleNavigation.value.some((item) => item.id === view.value)) navigate('dashboard');
-        await loadDashboard();
-    });
+async function handleAuthenticated() {
+    errors.value = [];
+    notice.value = '';
+    if (!visibleNavigation.value.some((item) => item.id === view.value)) navigate('dashboard');
+    await loadDashboard();
 }
 
 async function logOut() {
@@ -209,32 +209,7 @@ onBeforeUnmount(() => {
         <p>Estamos comprobando la sesión y la sucursal activa.</p>
     </main>
 
-    <main v-else-if="!session.authenticated" class="login-page">
-        <section class="login-intro" aria-label="La Victoria Bakery">
-            <img class="login-logo" :src="brandLogo" alt="">
-            <div>
-                <p class="brand-name">La Victoria Bakery</p>
-                <p>Pedidos, producción, inventario y cobranzas en una sola mesa operativa.</p>
-            </div>
-        </section>
-        <section class="login-card">
-            <p class="section-kicker">Acceso al sistema</p>
-            <h1>Bienvenido a tu jornada.</h1>
-            <p class="muted">Ingresá con tu usuario para continuar en la sucursal asignada.</p>
-            <section v-if="errors.length" id="login-errors" class="message error" role="alert">
-                <strong>No pudimos iniciar sesión</strong>
-                <ul><li v-for="error in errors" :key="error">{{ error }}</li></ul>
-            </section>
-            <form class="form-stack" @submit.prevent="logIn">
-                <label for="login-email">Correo electrónico</label>
-                <input id="login-email" v-model="loginForm.email" required autocomplete="username" type="email" :aria-describedby="errors.length ? 'login-errors' : undefined">
-                <label for="login-password">Contraseña</label>
-                <input id="login-password" v-model="loginForm.password" required autocomplete="current-password" type="password" :aria-describedby="errors.length ? 'login-errors' : undefined">
-                <button class="primary" :disabled="busy || !online" type="submit">{{ busy ? 'Ingresando…' : 'Ingresar' }}</button>
-            </form>
-            <p class="helper">{{ online ? 'Acceso exclusivo para personal autorizado.' : 'Conectate a internet para iniciar sesión.' }}</p>
-        </section>
-    </main>
+    <AuthPage v-else-if="!session.authenticated" :online="online" @authenticated="handleAuthenticated" />
 
     <div v-else class="app-layout">
         <aside class="sidebar">

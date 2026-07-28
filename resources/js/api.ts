@@ -145,6 +145,25 @@ export const api = {
             '/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }, { tenant: false },
         ).then((response) => response.data);
     },
+    forgotPassword(email: string) {
+        return request<ApiEnvelope<{ message: string }>>(
+            '/auth/forgot-password',
+            { method: 'POST', body: JSON.stringify({ email }) },
+            { tenant: false },
+        ).then((response) => response.data.message);
+    },
+    resetPassword(payload: {
+        token: string;
+        email: string;
+        password: string;
+        password_confirmation: string;
+    }) {
+        return request<ApiEnvelope<{ message: string }>>(
+            '/auth/reset-password',
+            { method: 'POST', body: JSON.stringify(payload) },
+            { tenant: false },
+        ).then((response) => response.data.message);
+    },
     me() {
         return request<ApiEnvelope<import('./types').SessionUser>>('/auth/me', {}, { tenant: false })
             .then((response) => response.data);

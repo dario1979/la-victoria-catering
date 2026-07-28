@@ -24,6 +24,9 @@ El valor `123456` es únicamente para demo local. El contenedor rechaza el
 arranque con `APP_ENV=production` si esa contraseña sigue activa o si
 `APP_DEBUG` está habilitado.
 
+El enlace **Olvidé mi contraseña** envía el correo de recuperación a Mailpit en
+el entorno local. El token vence a los 60 minutos y sólo puede utilizarse una vez.
+
 Para instalación local sin Docker se requiere PHP 8.4+, Composer y Node 22+.
 Ejecutar `scripts/install.ps1` en Windows o `scripts/install.sh` en Unix.
 

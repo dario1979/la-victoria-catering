@@ -31,6 +31,67 @@ paths:
         '200': { $ref: '#/components/responses/Ok' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '429': { description: Demasiados intentos }
+  /auth/forgot-password:
+    post:
+      security: []
+      summary: Envía un enlace de recuperación sin revelar si la cuenta existe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email, maxLength: 254 }
+      responses:
+        '200':
+          description: Respuesta genérica para correos registrados y no registrados
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [message]
+                    properties:
+                      message: { type: string }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { description: Demasiados intentos }
+  /auth/reset-password:
+    post:
+      security: []
+      summary: Restablece la contraseña mediante un token temporal de un solo uso
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, email, password, password_confirmation]
+              properties:
+                token: { type: string }
+                email: { type: string, format: email, maxLength: 254 }
+                password: { type: string, format: password, minLength: 8 }
+                password_confirmation: { type: string, format: password, minLength: 8 }
+      responses:
+        '200':
+          description: Contraseña actualizada
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [message]
+                    properties:
+                      message: { type: string }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { description: Demasiados intentos }
   /auth/me:
     get:
       summary: Devuelve usuario, organizaciones, roles y sucursales
