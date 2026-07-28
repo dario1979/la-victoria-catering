@@ -70,6 +70,30 @@ export interface Payment {
     external_reference?: string;
 }
 
+export interface DashboardMetrics {
+    orders_total: number;
+    orders_today: number;
+    overdue_orders: number;
+    pending_production: number;
+    outstanding_balance: string;
+    open_alerts: number;
+    critical_stock: number;
+}
+
+export interface DashboardAlert {
+    id: number;
+    event: string;
+    action: string;
+    severity: string;
+    status: string;
+}
+
+export interface DashboardSummary {
+    metrics: DashboardMetrics;
+    recent_orders: Order[];
+    open_alerts: DashboardAlert[];
+}
+
 export interface ApiEnvelope<T> {
     data: T;
 }

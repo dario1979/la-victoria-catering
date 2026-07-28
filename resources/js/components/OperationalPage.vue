@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
 import { api, errorMessages, HttpError, idempotencyKey } from '../api';
+import { formatCalendarDate, formatDateTime } from '../dates';
 import type { DataTableColumn, DataTableFilter, DataTableRowAction, OrderStatus, Payment, View } from '../types';
 import DataTableRowActions from './data-table/DataTableRowActions.vue';
 import ServerDataTable from './data-table/ServerDataTable.vue';
@@ -146,7 +147,7 @@ const columns: Record<ModuleView, DataTableColumn[]> = {
         { key: 'email', label: 'Contacto', sortable: true },
         { key: 'phone', label: 'Teléfono', priority: 'secondary' },
         { key: 'active', label: 'Estado' },
-        { key: 'updated_at', label: 'Actualización', priority: 'secondary', render: (row) => formatDate(row.updated_at) },
+        { key: 'updated_at', label: 'Actualización', priority: 'secondary', render: (row) => formatDateTime(row.updated_at) },
     ],
     products: [
         { key: 'name', label: 'Producto', sortable: true },
@@ -160,7 +161,7 @@ const columns: Record<ModuleView, DataTableColumn[]> = {
         { key: 'name', label: 'Ubicación', sortable: true },
         { key: 'branch_id', label: 'Sucursal', render: () => props.branchName },
         { key: 'active', label: 'Estado' },
-        { key: 'created_at', label: 'Creada', sortable: true, priority: 'secondary', render: (row) => formatDate(row.created_at) },
+        { key: 'created_at', label: 'Creada', sortable: true, priority: 'secondary', render: (row) => formatDateTime(row.created_at) },
     ],
     lots: [
         { key: 'code', label: 'Lote', sortable: true },
@@ -169,7 +170,7 @@ const columns: Record<ModuleView, DataTableColumn[]> = {
         { key: 'quantity', label: 'Disponible', sortable: true, align: 'end' },
         { key: 'reserved_quantity', label: 'Reservado', align: 'end', priority: 'secondary' },
         { key: 'unit', label: 'Unidad', render: (row) => unitLabel(String(row.unit)) },
-        { key: 'expires_at', label: 'Vencimiento', sortable: true, render: (row) => formatDate(row.expires_at) },
+        { key: 'expires_at', label: 'Vencimiento', sortable: true, render: (row) => formatCalendarDate(row.expires_at) },
         { key: 'status', label: 'Estado', sortable: true },
     ],
     orders: [
@@ -179,7 +180,7 @@ const columns: Record<ModuleView, DataTableColumn[]> = {
         { key: 'total', label: 'Total', sortable: true, align: 'end', render: (row) => money(String(row.total ?? 0)) },
         { key: 'paid_total', label: 'Saldo', align: 'end', render: (row) => money(decimalSubtract(row.total, row.paid_total)) },
         { key: 'delivery_method', label: 'Entrega', priority: 'secondary', render: (row) => deliveryLabel(String(row.delivery_method ?? '')) },
-        { key: 'required_at', label: 'Fecha requerida', sortable: true, render: (row) => formatDate(row.required_at) },
+        { key: 'required_at', label: 'Fecha requerida', sortable: true, render: (row) => formatDateTime(row.required_at) },
     ],
     recipes: [
         { key: 'product.name', label: 'Producto' },
@@ -187,7 +188,7 @@ const columns: Record<ModuleView, DataTableColumn[]> = {
         { key: 'yield_quantity', label: 'Rendimiento', sortable: true, align: 'end' },
         { key: 'yield_unit', label: 'Unidad', render: (row) => unitLabel(String(row.yield_unit)) },
         { key: 'status', label: 'Estado', sortable: true },
-        { key: 'created_at', label: 'Fecha', sortable: true, priority: 'secondary', render: (row) => formatDate(row.created_at) },
+        { key: 'created_at', label: 'Fecha', sortable: true, priority: 'secondary', render: (row) => formatDateTime(row.created_at) },
     ],
     production: [
         { key: 'id', label: 'Orden', sortable: true, render: (row) => `#${row.id}` },
@@ -196,7 +197,7 @@ const columns: Record<ModuleView, DataTableColumn[]> = {
         { key: 'planned_quantity', label: 'Cantidad', sortable: true, align: 'end' },
         { key: 'actual_yield', label: 'Rendimiento', align: 'end', priority: 'secondary' },
         { key: 'status', label: 'Estado', sortable: true },
-        { key: 'started_at', label: 'Inicio', sortable: true, priority: 'secondary', render: (row) => formatDate(row.started_at) },
+        { key: 'started_at', label: 'Inicio', sortable: true, priority: 'secondary', render: (row) => formatDateTime(row.started_at) },
     ],
     payments: [
         { key: 'id', label: 'Pago', sortable: true, render: (row) => `#${row.id}` },
@@ -204,14 +205,14 @@ const columns: Record<ModuleView, DataTableColumn[]> = {
         { key: 'order.customer_name', label: 'Cliente' },
         { key: 'method', label: 'Medio', sortable: true, render: (row) => paymentMethod(String(row.method)) },
         { key: 'amount', label: 'Importe', sortable: true, align: 'end', render: (row) => money(String(row.amount ?? 0)) },
-        { key: 'created_at', label: 'Fecha', sortable: true, priority: 'secondary', render: (row) => formatDate(row.created_at) },
+        { key: 'created_at', label: 'Fecha', sortable: true, priority: 'secondary', render: (row) => formatDateTime(row.created_at) },
     ],
     alerts: [
         { key: 'severity', label: 'Severidad', sortable: true },
         { key: 'event', label: 'Tipo', sortable: true },
         { key: 'action', label: 'Acción esperada' },
         { key: 'status', label: 'Estado', sortable: true },
-        { key: 'last_seen_at', label: 'Abierta', sortable: true, render: (row) => formatDate(row.last_seen_at) },
+        { key: 'last_seen_at', label: 'Abierta', sortable: true, render: (row) => formatDateTime(row.last_seen_at) },
     ],
 };
 
@@ -726,12 +727,6 @@ function decimalSubtract(left: unknown, right: unknown) {
     return (cents / 100).toFixed(2);
 }
 
-function formatDate(value: unknown) {
-    if (!value) return '—';
-    const date = new Date(String(value));
-    return Number.isNaN(date.getTime()) ? String(value) : new Intl.DateTimeFormat('es-AR', { dateStyle: 'short', timeStyle: String(value).includes('T') ? 'short' : undefined }).format(date);
-}
-
 function statusLabel(value: string) {
     return ({
         draft: 'Borrador', confirmed: 'Confirmado', in_production: 'En producción', ready: 'Listo',
@@ -984,7 +979,7 @@ function recipeSelectionLabel(row: Record<string, unknown> | null) {
                         </div>
                     </section>
                     <section class="trace-step">
-                        <span class="trace-marker">3</span><div><small>Resultado</small><strong v-if="detail.produced_lot">Lote {{ detail.produced_lot.code }}</strong><strong v-else>Sin lote terminado</strong><p v-if="detail.produced_lot">{{ detail.produced_lot.quantity }} {{ unitLabel(detail.produced_lot.unit) }} · vence {{ formatDate(detail.produced_lot.expires_at) }}</p></div>
+                        <span class="trace-marker">3</span><div><small>Resultado</small><strong v-if="detail.produced_lot">Lote {{ detail.produced_lot.code }}</strong><strong v-else>Sin lote terminado</strong><p v-if="detail.produced_lot">{{ detail.produced_lot.quantity }} {{ unitLabel(detail.produced_lot.unit) }} · vence {{ formatCalendarDate(detail.produced_lot.expires_at) }}</p></div>
                     </section>
                 </div>
             </template>
@@ -994,11 +989,11 @@ function recipeSelectionLabel(row: Record<string, unknown> | null) {
                     <div><dt>Lote</dt><dd>{{ detail.data.code }}</dd></div>
                     <div><dt>Disponible</dt><dd>{{ detail.data.quantity }} {{ unitLabel(detail.data.unit) }}</dd></div>
                     <div><dt>Reservado</dt><dd>{{ detail.data.reserved_quantity }} {{ unitLabel(detail.data.unit) }}</dd></div>
-                    <div><dt>Vencimiento</dt><dd>{{ formatDate(detail.data.expires_at) }}</dd></div>
+                    <div><dt>Vencimiento</dt><dd>{{ formatCalendarDate(detail.data.expires_at) }}</dd></div>
                 </dl>
                 <h3>Movimientos recientes</h3>
                 <div class="responsive-detail-table"><table><thead><tr><th>Tipo</th><th>Cantidad</th><th>Motivo</th><th>Fecha</th></tr></thead><tbody>
-                    <tr v-for="movement in detail.movements?.data ?? []" :key="movement.id"><td data-label="Tipo">{{ statusLabel(movement.type) }}</td><td data-label="Cantidad" class="numeric">{{ movement.quantity }}</td><td data-label="Motivo">{{ movement.reason }}</td><td data-label="Fecha">{{ formatDate(movement.created_at) }}</td></tr>
+                    <tr v-for="movement in detail.movements?.data ?? []" :key="movement.id"><td data-label="Tipo">{{ statusLabel(movement.type) }}</td><td data-label="Cantidad" class="numeric">{{ movement.quantity }}</td><td data-label="Motivo">{{ movement.reason }}</td><td data-label="Fecha">{{ formatDateTime(movement.created_at) }}</td></tr>
                 </tbody></table></div>
             </template>
 
@@ -1006,14 +1001,14 @@ function recipeSelectionLabel(row: Record<string, unknown> | null) {
                 <dl class="detail-grid">
                     <div><dt>Pedido</dt><dd>#{{ detail.id }}</dd></div><div><dt>Cliente</dt><dd>{{ detail.customer_name }}</dd></div>
                     <div><dt>Estado</dt><dd><StatusBadge :status="detail.status" /></dd></div><div><dt>Total</dt><dd>{{ money(detail.total) }}</dd></div>
-                    <div><dt>Pagado</dt><dd>{{ money(detail.paid_total) }}</dd></div><div><dt>Fecha requerida</dt><dd>{{ formatDate(detail.required_at) }}</dd></div>
+                    <div><dt>Pagado</dt><dd>{{ money(detail.paid_total) }}</dd></div><div><dt>Fecha requerida</dt><dd>{{ formatDateTime(detail.required_at) }}</dd></div>
                 </dl>
                 <h3>Productos</h3>
                 <div class="responsive-detail-table"><table><thead><tr><th>Producto</th><th>Cantidad</th><th>Precio</th></tr></thead><tbody>
                     <tr v-for="item in detail.items ?? []" :key="item.id"><td data-label="Producto">#{{ item.product_id }}</td><td data-label="Cantidad" class="numeric">{{ item.quantity }}</td><td data-label="Precio" class="numeric">{{ money(item.unit_price) }}</td></tr>
                 </tbody></table></div>
                 <h3>Historial</h3>
-                <ol class="timeline"><li v-for="transition in detail.transitions ?? []" :key="transition.id"><StatusBadge :status="transition.to_status" /><span>{{ formatDate(transition.created_at) }}</span></li></ol>
+                <ol class="timeline"><li v-for="transition in detail.transitions ?? []" :key="transition.id"><StatusBadge :status="transition.to_status" /><span>{{ formatDateTime(transition.created_at) }}</span></li></ol>
             </template>
 
             <template v-else-if="view === 'recipes'">
@@ -1031,7 +1026,7 @@ function recipeSelectionLabel(row: Record<string, unknown> | null) {
                 <dl class="detail-grid">
                     <div v-for="(value, key) in detail" :key="key" v-show="!['organization_id', 'branch_id', 'updated_at'].includes(String(key)) && typeof value !== 'object'">
                         <dt>{{ String(key).replaceAll('_', ' ') }}</dt>
-                        <dd>{{ key.toString().includes('at') ? formatDate(value) : value ?? '—' }}</dd>
+                        <dd>{{ key.toString().includes('at') ? formatDateTime(value) : value ?? '—' }}</dd>
                     </div>
                 </dl>
             </template>

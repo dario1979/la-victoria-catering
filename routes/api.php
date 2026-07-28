@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AlertController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CustomerController;
+use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DeliveryController;
 use App\Http\Controllers\Api\V1\LocationController;
 use App\Http\Controllers\Api\V1\LotController;
@@ -22,6 +23,7 @@ Route::middleware('web')->prefix('v1')->group(function (): void {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
 
         Route::middleware('tenant')->group(function (): void {
+            Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
             Route::apiResource('customers', CustomerController::class)->only(['index', 'store', 'show', 'update']);
             Route::apiResource('products', ProductController::class)->only(['index', 'store', 'show', 'update']);
             Route::get('/locations', [LocationController::class, 'index']);

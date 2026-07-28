@@ -2,8 +2,9 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { api, errorMessages, HttpError } from '../api';
 import brandLogo from '../assets/brand/la-victoria-bakery-logo.png';
+import { formatDateTime } from '../dates';
 import { useSessionStore } from '../stores/session';
-import type { Order, Payment, View } from '../types';
+import type { DashboardAlert, DashboardMetrics, DashboardSummary, Order, View } from '../types';
 import DataState from './ui/DataState.vue';
 import MetricBlock from './ui/MetricBlock.vue';
 import OperationalPage from './OperationalPage.vue';
@@ -20,9 +21,16 @@ const notice = ref('');
 const errors = ref<string[]>([]);
 const errorTitle = ref('No pudimos completar la operación');
 const recentOrders = ref<Order[]>([]);
-const recentPayments = ref<Payment[]>([]);
-const dashboardProductions = ref<Record<string, any>[]>([]);
-const dashboardAlerts = ref<Record<string, any>[]>([]);
+const dashboardAlerts = ref<DashboardAlert[]>([]);
+const dashboardMetrics = ref<DashboardMetrics>({
+    orders_total: 0,
+    orders_today: 0,
+    overdue_orders: 0,
+    pending_production: 0,
+    outstanding_balance: '0.00',
+    open_alerts: 0,
+    critical_stock: 0,
+});
 const mobileMenuOpen = ref(false);
 const loginForm = reactive({ email: 'admin@lavictoria.test', password: '' });
 let loadSequence = 0;
@@ -58,11 +66,6 @@ const pageDescription = computed(() => ({
     payments: 'Registro seguro y seguimiento de cobranzas.',
     alerts: 'Situaciones que requieren revisión o acción.',
 })[view.value]);
-const outstanding = computed(() => centsToDecimal(recentOrders.value.reduce(
-    (sum, order) => sum + decimalToCents(order.total) - decimalToCents(order.paid_total),
-    0n,
-)));
-
 function setConnection() {
     online.value = navigator.onLine;
 }
@@ -82,17 +85,11 @@ async function loadDashboard() {
     if (!session.authenticated || !online.value) return;
     const sequence = ++loadSequence;
     await run(async () => {
-        const [orders, payments, productions, alerts] = await Promise.all([
-            api.get<Order[]>('/orders'),
-            api.get<Payment[]>('/payments'),
-            api.get<Record<string, any>[]>('/production-orders'),
-            api.get<Record<string, any>[]>('/alerts'),
-        ]);
+        const summary = await api.get<DashboardSummary>('/dashboard/summary');
         if (sequence !== loadSequence || view.value !== 'dashboard') return;
-        recentOrders.value = orders;
-        recentPayments.value = payments;
-        dashboardProductions.value = productions;
-        dashboardAlerts.value = alerts;
+        recentOrders.value = summary.recent_orders;
+        dashboardAlerts.value = summary.open_alerts;
+        dashboardMetrics.value = summary.metrics;
     });
 }
 
@@ -101,9 +98,16 @@ async function changeBranch(event: Event) {
     session.selectTenant(Number(session.organizationId), selectedBranch);
     loadSequence++;
     recentOrders.value = [];
-    recentPayments.value = [];
-    dashboardProductions.value = [];
     dashboardAlerts.value = [];
+    dashboardMetrics.value = {
+        orders_total: 0,
+        orders_today: 0,
+        overdue_orders: 0,
+        pending_production: 0,
+        outstanding_balance: '0.00',
+        open_alerts: 0,
+        critical_stock: 0,
+    };
     notice.value = `Sucursal activa: ${session.branch}.`;
     if (view.value === 'dashboard') await loadDashboard();
 }
@@ -161,23 +165,6 @@ function showNotice(message: string) {
 
 function money(value: string) {
     return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(Number(value));
-}
-
-function decimalToCents(value: string) {
-    const [whole = '0', fraction = ''] = value.split('.');
-    return BigInt(whole || '0') * 100n + BigInt(fraction.padEnd(2, '0').slice(0, 2));
-}
-
-function centsToDecimal(value: bigint) {
-    const sign = value < 0 ? '-' : '';
-    const absolute = value < 0 ? -value : value;
-    return `${sign}${absolute / 100n}.${String(absolute % 100n).padStart(2, '0')}`;
-}
-
-function formatDate(value: string | null | undefined) {
-    if (!value) return 'Sin fecha';
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('es-AR', { dateStyle: 'short' }).format(date);
 }
 
 onMounted(async () => {
@@ -288,10 +275,10 @@ onBeforeUnmount(() => {
                     <button class="primary" :disabled="!online" @click="navigate('orders')">Ir a pedidos</button>
                 </div>
                 <div class="metric-grid">
-                    <MetricBlock label="Pedidos visibles" :value="recentOrders.length" detail="En la sucursal activa" action="Abrir pedidos" @activate="navigate('orders')" />
-                    <MetricBlock label="Producción pendiente" :value="dashboardProductions.filter(p => p.status === 'planned' || p.status === 'in_progress').length" detail="Órdenes por completar" action="Abrir producción" @activate="navigate('production')" />
-                    <MetricBlock label="Saldo pendiente" :value="money(outstanding)" detail="Sobre pedidos cargados" action="Abrir cobranzas" @activate="navigate('payments')" />
-                    <MetricBlock label="Alertas abiertas" :value="dashboardAlerts.filter(a => a.status !== 'resolved').length" detail="Requieren revisión" action="Abrir alertas" @activate="navigate('alerts')" />
+                    <MetricBlock label="Pedidos de la sucursal" :value="dashboardMetrics.orders_total" :detail="`${dashboardMetrics.orders_today} cargados hoy`" action="Abrir pedidos" @activate="navigate('orders')" />
+                    <MetricBlock label="Producción pendiente" :value="dashboardMetrics.pending_production" detail="Órdenes por completar" action="Abrir producción" @activate="navigate('production')" />
+                    <MetricBlock label="Saldo pendiente" :value="money(dashboardMetrics.outstanding_balance)" detail="Sobre todos los pedidos" action="Abrir cobranzas" @activate="navigate('payments')" />
+                    <MetricBlock label="Alertas abiertas" :value="dashboardMetrics.open_alerts" :detail="`${dashboardMetrics.critical_stock} productos con stock crítico`" action="Abrir alertas" @activate="navigate('alerts')" />
                 </div>
                 <div class="dashboard-grid">
                     <section class="panel priority-panel">
@@ -308,7 +295,7 @@ onBeforeUnmount(() => {
                         <div class="panel-head"><div><p class="section-kicker">Actividad</p><h3>Pedidos próximos</h3></div><button class="text-button" @click="navigate('orders')">Ver todos</button></div>
                         <ol v-if="recentOrders.length" class="order-list">
                             <li v-for="order in recentOrders.slice(0, 5)" :key="order.id">
-                                <div><strong>#{{ order.id }} · {{ order.customer_name }}</strong><span>{{ formatDate(order.required_at) }}</span></div>
+                                <div><strong>#{{ order.id }} · {{ order.customer_name }}</strong><span>{{ formatDateTime(order.required_at) }}</span></div>
                                 <StatusBadge :status="order.status" />
                                 <span class="numeric">{{ money(order.total) }}</span>
                             </li>
