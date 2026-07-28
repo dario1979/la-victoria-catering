@@ -31,7 +31,7 @@ class DatabaseSeeder extends Seeder
                 'name' => ucfirst($role).' Demo',
                 'email' => $email,
                 'email_verified_at' => now(),
-                'password' => Hash::make(env('DEMO_USER_PASSWORD', 'ChangeMe-Demo-123!')),
+                'password' => Hash::make(env('DEMO_USER_PASSWORD', '123456')),
             ]);
             DB::table('organization_user')->insert([
                 'organization_id' => $organizationId, 'user_id' => $user->id, 'role' => $role,

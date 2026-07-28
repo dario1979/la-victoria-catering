@@ -26,6 +26,7 @@ x-backend: &backend
     MAIL_MAILER: ${MAIL_MAILER:-smtp}
     MAIL_HOST: ${MAIL_HOST:-mailpit}
     MAIL_PORT: ${MAIL_PORT:-1025}
+    DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-123456}
   restart: unless-stopped
   depends_on:
     postgres:
@@ -88,6 +89,7 @@ services:
       MAIL_MAILER: ${MAIL_MAILER:-smtp}
       MAIL_HOST: ${MAIL_HOST:-mailpit}
       MAIL_PORT: ${MAIL_PORT:-1025}
+      DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-123456}
       RUN_MIGRATIONS: "true"
     ports:
       - "${FORWARD_BACKEND_PORT:-8000}:8000"
