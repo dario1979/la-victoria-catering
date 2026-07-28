@@ -209,7 +209,7 @@ const columns: Record<ModuleView, DataTableColumn[]> = {
     alerts: [
         { key: 'severity', label: 'Severidad', sortable: true },
         { key: 'event', label: 'Tipo', sortable: true },
-        { key: 'expected_action', label: 'Acción esperada' },
+        { key: 'action', label: 'Acción esperada' },
         { key: 'status', label: 'Estado', sortable: true },
         { key: 'last_seen_at', label: 'Abierta', sortable: true, render: (row) => formatDate(row.last_seen_at) },
     ],
@@ -590,7 +590,7 @@ function confirmAlert(row: Record<string, any>, action: string) {
         entity: row.event,
         label: resolving ? 'Marcar como resuelta' : 'Reconocer alerta',
         tone: resolving ? 'primary' : 'primary',
-        details: [`Severidad: ${statusLabel(row.severity)}`, row.expected_action ? `Acción esperada: ${row.expected_action}` : ''],
+        details: [`Severidad: ${statusLabel(row.severity)}`, row.action ? `Acción esperada: ${row.action}` : ''],
         execute: () => mutate(() => api.post(`/alerts/${row.id}/${action}`, {}), resolving ? 'Alerta resuelta.' : 'Alerta reconocida.', false),
     });
 }

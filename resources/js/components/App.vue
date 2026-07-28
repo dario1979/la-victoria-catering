@@ -299,7 +299,7 @@ onBeforeUnmount(() => {
                         <ol v-if="dashboardAlerts.filter(a => a.status !== 'resolved').length" class="priority-list">
                             <li v-for="alert in dashboardAlerts.filter(a => a.status !== 'resolved').slice(0, 5)" :key="alert.id">
                                 <StatusBadge :status="alert.severity" />
-                                <div><strong>{{ alert.event }}</strong><p>{{ alert.expected_action }}</p></div>
+                                <div><strong>{{ alert.event }}</strong><p>{{ alert.action }}</p></div>
                             </li>
                         </ol>
                         <DataState v-else title="No hay alertas abiertas" message="La sucursal no tiene excepciones activas en este momento." />

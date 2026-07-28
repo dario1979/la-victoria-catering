@@ -20,10 +20,10 @@ final class AlertController extends Controller
                 ->where('organization_id', $tenant->organization->id)
                 ->where(fn ($query) => $query->whereNull('branch_id')->orWhere('branch_id', $tenant->branch->id)),
             $request,
-            ['event', 'condition', 'expected_action'],
+            ['event', 'condition', 'action'],
             ['id' => 'id', 'event' => 'event', 'severity' => 'severity', 'status' => 'status', 'last_seen_at' => 'last_seen_at'],
             ['severity' => 'severity', 'status' => 'status', 'event' => 'event'],
-            ['ID' => 'id', 'Evento' => 'event', 'Condición' => 'condition', 'Severidad' => 'severity', 'Estado' => 'status', 'Acción esperada' => 'expected_action', 'Última detección' => 'last_seen_at'],
+            ['ID' => 'id', 'Evento' => 'event', 'Condición' => 'condition', 'Severidad' => 'severity', 'Estado' => 'status', 'Acción esperada' => 'action', 'Última detección' => fn (Alert $alert) => $alert->last_seen_at?->toAtomString()],
             'alertas',
             'last_seen_at',
         );

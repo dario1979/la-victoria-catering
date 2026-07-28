@@ -8,6 +8,7 @@ use App\Http\Requests\Api\V1\SaveRecipeRequest;
 use App\Models\Recipe;
 use App\Support\ServerDataTable;
 use App\Support\TenantContext;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,7 +22,16 @@ final class RecipeController extends Controller
                 ->where('organization_id', $tenant->organization->id))
                 ->with(['product', 'items.ingredient']),
             $request,
-            [],
+            [
+                'status',
+                'yield_unit',
+                fn (Builder $query, string $search, string $operator) => $query
+                    ->orWhereHas('product', fn (Builder $product) => $product
+                        ->where('name', $operator, "%{$search}%")),
+                fn (Builder $query, string $search) => ctype_digit($search)
+                    ? $query->orWhere('id', (int) $search)->orWhere('version', (int) $search)
+                    : null,
+            ],
             ['id' => 'id', 'version' => 'version', 'status' => 'status', 'yield_quantity' => 'yield_quantity', 'created_at' => 'created_at'],
             ['product_id' => 'product_id', 'status' => 'status'],
             ['ID' => 'id', 'Producto' => 'product.name', 'Versión' => 'version', 'Estado' => 'status', 'Rendimiento' => 'yield_quantity', 'Unidad' => 'yield_unit', 'Creada' => 'created_at'],

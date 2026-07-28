@@ -11,6 +11,7 @@ use App\Models\ProductionBatch;
 use App\Support\IdempotentAction;
 use App\Support\ServerDataTable;
 use App\Support\TenantContext;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -26,7 +27,18 @@ final class ProductionOrderController extends Controller
                 ->where('branch_id', $tenant->branch->id)
                 ->with(['order', 'recipe.product']),
             $request,
-            [],
+            [
+                'status',
+                'unit',
+                fn (Builder $query, string $search, string $operator) => $query
+                    ->orWhereHas('order', fn (Builder $order) => $order
+                        ->where('customer_name', $operator, "%{$search}%"))
+                    ->orWhereHas('recipe.product', fn (Builder $product) => $product
+                        ->where('name', $operator, "%{$search}%")),
+                fn (Builder $query, string $search) => ctype_digit($search)
+                    ? $query->orWhere('id', (int) $search)->orWhere('order_id', (int) $search)
+                    : null,
+            ],
             ['id' => 'id', 'status' => 'status', 'planned_quantity' => 'planned_quantity', 'started_at' => 'started_at', 'completed_at' => 'completed_at'],
             ['status' => 'status', 'order_id' => 'order_id', 'recipe_id' => 'recipe_id'],
             ['ID' => 'id', 'Pedido' => 'order_id', 'Producto' => 'recipe.product.name', 'Estado' => 'status', 'Planificado' => 'planned_quantity', 'Rendimiento' => 'actual_yield', 'Unidad' => 'unit', 'Inicio' => 'started_at', 'Fin' => 'completed_at'],

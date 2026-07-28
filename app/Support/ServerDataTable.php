@@ -2,16 +2,21 @@
 
 namespace App\Support;
 
+use BackedEnum;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use JsonSerializable;
+use Stringable;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
+use UnexpectedValueException;
 use ZipArchive;
 
 final class ServerDataTable
 {
     /**
-     * @param  list<string>  $searchable
+     * @param  list<string|callable(Builder, string, string): void>  $searchable
      * @param  array<string, string>  $sortable
      * @param  array<string, string|callable(Builder, mixed): void>  $filterable
      * @param  array<string, string|callable(object): mixed>  $exportColumns
@@ -49,9 +54,14 @@ final class ServerDataTable
 
         $search = trim((string) ($validated['search'] ?? ''));
         if ($search !== '' && $searchable !== []) {
-            $query->where(function (Builder $nested) use ($searchable, $search): void {
-                foreach ($searchable as $column) {
-                    $nested->orWhere($column, 'like', "%{$search}%");
+            $operator = $query->getConnection()->getDriverName() === 'pgsql' ? 'ilike' : 'like';
+            $query->where(function (Builder $nested) use ($searchable, $search, $operator): void {
+                foreach ($searchable as $definition) {
+                    if (! is_string($definition) && is_callable($definition)) {
+                        $definition($nested, $search, $operator);
+                    } else {
+                        $nested->orWhere($definition, $operator, "%{$search}%");
+                    }
                 }
             });
         }
@@ -61,7 +71,7 @@ final class ServerDataTable
                 continue;
             }
             $definition = $filterable[$name];
-            if (is_callable($definition)) {
+            if (! is_string($definition) && is_callable($definition)) {
                 $definition($query, $value);
             } else {
                 $query->where($definition, $value);
@@ -107,7 +117,9 @@ final class ServerDataTable
         foreach ($query->lazy(500) as $row) {
             $values = [];
             foreach ($columns as $column) {
-                $values[] = is_callable($column) ? $column($row) : data_get($row, $column);
+                $values[] = ! is_string($column) && is_callable($column)
+                    ? $column($row)
+                    : data_get($row, $column);
             }
             $this->xlsxRow($worksheet, $values, $rowNumber++);
         }
@@ -150,10 +162,34 @@ final class ServerDataTable
         fwrite($handle, "<row r=\"{$row}\">");
         foreach ($values as $index => $value) {
             $column = $this->columnName($index + 1);
-            $escaped = htmlspecialchars((string) ($value ?? ''), ENT_XML1 | ENT_QUOTES, 'UTF-8');
+            $escaped = htmlspecialchars($this->normalizeCell($value), ENT_XML1 | ENT_QUOTES, 'UTF-8');
             fwrite($handle, "<c r=\"{$column}{$row}\" t=\"inlineStr\"><is><t>{$escaped}</t></is></c>");
         }
         fwrite($handle, '</row>');
+    }
+
+    private function normalizeCell(mixed $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+        if ($value instanceof DateTimeInterface) {
+            return $value->format(DateTimeInterface::ATOM);
+        }
+        if ($value instanceof BackedEnum) {
+            return (string) $value->value;
+        }
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+        if (is_scalar($value) || $value instanceof Stringable) {
+            return (string) $value;
+        }
+        if (is_array($value) || $value instanceof JsonSerializable) {
+            return json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
+        }
+
+        throw new UnexpectedValueException('Unsupported spreadsheet cell value: '.get_debug_type($value));
     }
 
     private function columnName(int $number): string
