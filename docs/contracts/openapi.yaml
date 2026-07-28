@@ -414,7 +414,7 @@ components:
     PerPage:
       name: per_page
       in: query
-      schema: { type: integer, enum: [10, 20, 50, 100], default: 20 }
+      schema: { type: integer, enum: [10, 25, 50, 100], default: 25 }
     Sort:
       name: sort
       in: query
@@ -489,6 +489,6 @@ components:
         current_page: { type: integer, minimum: 1 }
         from: { type: [integer, 'null'] }
         last_page: { type: integer, minimum: 1 }
-        per_page: { type: integer, enum: [10, 20, 50, 100] }
+        per_page: { type: integer, enum: [10, 25, 50, 100] }
         to: { type: [integer, 'null'] }
         total: { type: integer, minimum: 0 }

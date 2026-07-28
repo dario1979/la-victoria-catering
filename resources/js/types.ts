@@ -2,8 +2,10 @@ export type View =
     | 'dashboard'
     | 'customers'
     | 'products'
+    | 'locations'
     | 'lots'
     | 'orders'
+    | 'recipes'
     | 'production'
     | 'payments'
     | 'alerts';
@@ -100,6 +102,7 @@ export interface DataTableColumn<T extends Record<string, unknown> = Record<stri
     label: string;
     sortable?: boolean;
     align?: 'start' | 'end';
+    priority?: 'primary' | 'secondary';
     render?: (row: T) => string;
 }
 
@@ -107,6 +110,13 @@ export interface DataTableFilter {
     key: string;
     label: string;
     options: Array<{ label: string; value: string }>;
+}
+
+export interface DataTableRowAction {
+    key: string;
+    label: string;
+    tone?: 'default' | 'danger';
+    disabled?: boolean;
 }
 
 export interface ApiProblem {

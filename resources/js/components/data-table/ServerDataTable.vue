@@ -19,20 +19,29 @@ const props = withDefaults(defineProps<{
     persistInUrl?: boolean;
     canExport?: boolean;
     selectable?: boolean;
+    label?: string;
+    emptyLabel?: string;
+    emptyAction?: string;
+    highlightedId?: string | number | null;
 }>(), {
     filters: () => [],
     initialSort: 'id',
     initialDirection: 'desc',
-    initialPerPage: 20,
+    initialPerPage: 25,
     persistInUrl: false,
     canExport: true,
     selectable: false,
+    label: 'Listado',
+    emptyLabel: 'registro',
+    emptyAction: '',
+    highlightedId: null,
 });
 
 const emit = defineEmits<{
     loaded: [rows: Record<string, unknown>[]];
     error: [messages: string[]];
     selection: [rows: Record<string, unknown>[]];
+    emptyAction: [];
 }>();
 
 const rows = ref<Record<string, unknown>[]>([]);
@@ -40,6 +49,7 @@ const loading = ref(true);
 const exporting = ref(false);
 const failures = ref<string[]>([]);
 const announcement = ref('');
+const filtersOpen = ref(false);
 const selectedIds = ref<Array<string | number>>([]);
 const meta = reactive<DataTableMeta>({
     current_page: 1, from: null, last_page: 1, per_page: props.initialPerPage, to: null, total: 0,
@@ -56,6 +66,7 @@ let debounce: ReturnType<typeof setTimeout> | undefined;
 let requestSequence = 0;
 
 const hasCriteria = computed(() => query.search !== '' || Object.values(query.filters).some(Boolean));
+const activeFilterCount = computed(() => Object.values(query.filters).filter(Boolean).length);
 const allSelected = computed(() => rows.value.length > 0 && rows.value.every((row) => selectedIds.value.includes(row.id as string | number)));
 
 function readUrl() {
@@ -63,7 +74,7 @@ function readUrl() {
     const params = new URLSearchParams(location.search);
     const prefix = urlPrefix();
     query.page = Math.max(1, Number(params.get(`${prefix}page`) ?? 1));
-    query.per_page = [10, 20, 50, 100].includes(Number(params.get(`${prefix}per_page`))) ? Number(params.get(`${prefix}per_page`)) : props.initialPerPage;
+    query.per_page = [10, 25, 50, 100].includes(Number(params.get(`${prefix}per_page`))) ? Number(params.get(`${prefix}per_page`)) : props.initialPerPage;
     query.search = params.get(`${prefix}search`) ?? '';
     const persistedSort = params.get(`${prefix}sort`);
     query.sort = persistedSort && props.columns.some((column) => column.key === persistedSort && column.sortable) ? persistedSort : props.initialSort;
@@ -194,24 +205,36 @@ defineExpose({ refresh: load });
             :loading="loading"
             :exporting="exporting"
             :can-export="canExport"
+            :active-filter-count="activeFilterCount"
+            :has-filters="filters.length > 0"
+            :filters-open="filtersOpen"
             @update:search="query.search = $event"
             @refresh="load"
             @export="exportRows"
+            @toggle-filters="filtersOpen = !filtersOpen"
+            @clear="clearCriteria"
         />
-        <DataTableFilters v-model="query.filters" :filters="filters" />
+        <DataTableFilters v-model="query.filters" :filters="filters" :expanded="filtersOpen" @clear="clearCriteria" />
         <div v-if="selectedIds.length" class="bulk-action-bar" role="status">
             <span>{{ selectedIds.length }} seleccionado{{ selectedIds.length === 1 ? '' : 's' }}</span>
             <slot name="bulk-actions" :selected-ids="selectedIds" :refresh="load" />
         </div>
-        <DataTableSkeleton v-if="loading && !rows.length" />
-        <div v-else-if="failures.length" class="data-table-state error" role="alert">
+        <DataTableSkeleton v-if="loading && !rows.length && !failures.length" />
+        <div v-if="failures.length" class="data-table-state error" role="alert">
             <strong>No pudimos cargar el listado</strong>
             <p>{{ failures.join(' ') }}</p>
             <button class="secondary" type="button" @click="load">Reintentar</button>
         </div>
-        <DataTableEmptyState v-else-if="!rows.length" :filtered="hasCriteria" @clear="clearCriteria" />
-        <div v-else class="table-wrap">
-            <table>
+        <DataTableEmptyState
+            v-if="!loading && !failures.length && !rows.length"
+            :filtered="hasCriteria"
+            :entity-label="emptyLabel"
+            :action-label="emptyAction"
+            @clear="clearCriteria"
+            @create="$emit('emptyAction')"
+        />
+        <div v-if="rows.length" class="table-wrap">
+            <table :aria-label="label">
                 <thead>
                     <tr>
                         <th v-if="selectable" class="selection-cell">
@@ -220,7 +243,7 @@ defineExpose({ refresh: load });
                         <th
                             v-for="column in columns"
                             :key="column.key"
-                            :class="{ numeric: column.align === 'end' }"
+                            :class="[{ numeric: column.align === 'end' }, `priority-${column.priority ?? 'primary'}`]"
                             :aria-sort="column.sortable && query.sort === column.key ? (query.direction === 'asc' ? 'ascending' : 'descending') : undefined"
                         >
                             <DataTableColumnHeader
@@ -231,15 +254,20 @@ defineExpose({ refresh: load });
                                 @sort="sort(column)"
                             />
                         </th>
-                        <th v-if="$slots.actions"><span class="sr-only">Acciones</span></th>
+                        <th v-if="$slots.actions" class="actions-column">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="row in rows" :key="String(row.id)">
+                    <tr v-for="row in rows" :key="String(row.id)" :class="{ 'is-highlighted': String(row.id) === String(highlightedId) }">
                         <td v-if="selectable" class="selection-cell" data-label="Seleccionar">
                             <input v-model="selectedIds" type="checkbox" :value="row.id" :aria-label="`Seleccionar registro ${row.id}`">
                         </td>
-                        <td v-for="column in columns" :key="column.key" :data-label="column.label" :class="{ numeric: column.align === 'end' }">
+                        <td
+                            v-for="column in columns"
+                            :key="column.key"
+                            :data-label="column.label"
+                            :class="[{ numeric: column.align === 'end' }, `priority-${column.priority ?? 'primary'}`]"
+                        >
                             <slot :name="`cell-${column.key}`" :row="row" :value="value(row, column)">
                                 {{ value(row, column) }}
                             </slot>
@@ -249,6 +277,6 @@ defineExpose({ refresh: load });
                 </tbody>
             </table>
         </div>
-        <DataTablePagination v-if="!failures.length" :meta="meta" :loading="loading" @page="setPage" @per-page="setPerPage" />
+        <DataTablePagination v-if="rows.length" :meta="meta" :loading="loading" @page="setPage" @per-page="setPerPage" />
     </section>
 </template>

@@ -38,7 +38,7 @@ final class ServerDataTable
             'filters' => $filters,
         ], [
             'page' => ['sometimes', 'integer', 'min:1'],
-            'per_page' => ['sometimes', 'integer', Rule::in([10, 20, 50, 100])],
+            'per_page' => ['sometimes', 'integer', Rule::in([10, 25, 50, 100])],
             'search' => ['sometimes', 'nullable', 'string', 'max:200'],
             'sort' => ['sometimes', 'string', Rule::in(array_keys($sortable))],
             'direction' => ['sometimes', Rule::in(['asc', 'desc'])],
@@ -76,7 +76,7 @@ final class ServerDataTable
             return $this->excel($query, $exportColumns, $exportName);
         }
 
-        $page = $query->paginate((int) ($validated['per_page'] ?? 20));
+        $page = $query->paginate((int) ($validated['per_page'] ?? 25));
 
         return response()->json([
             'data' => $page->items(),

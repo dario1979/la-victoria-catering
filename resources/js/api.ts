@@ -117,6 +117,14 @@ export const api = {
             path, { method: 'POST', body: JSON.stringify(body) }, { idempotencyKey },
         ).then((response) => response.data);
     },
+    patch<T>(path: string, body: unknown) {
+        return request<ApiEnvelope<T>>(
+            path, { method: 'PATCH', body: JSON.stringify(body) },
+        ).then((response) => response.data);
+    },
+    getRaw<T>(path: string) {
+        return request<T>(path);
+    },
     async csrf() {
         const response = await request<ApiEnvelope<{ token: string }>>('/auth/csrf', {}, { tenant: false });
         configureApi({ csrfToken: response.data.token });

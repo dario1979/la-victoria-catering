@@ -41,6 +41,17 @@ class ServerDataTableTest extends TestCase
             ->assertJsonValidationErrors(['sort', 'per_page']);
     }
 
+    public function test_list_accepts_operational_page_sizes(): void
+    {
+        [$organization, $branch, $user] = $this->tenant('A');
+
+        $this->actingAs($user)
+            ->withHeaders($this->headers($organization, $branch))
+            ->getJson('/api/v1/customers?per_page=25')
+            ->assertOk()
+            ->assertJsonPath('meta.per_page', 25);
+    }
+
     public function test_excel_export_is_tenant_scoped_and_streamed_as_an_excel_workbook(): void
     {
         [$organizationA, $branchA, $user] = $this->tenant('A');

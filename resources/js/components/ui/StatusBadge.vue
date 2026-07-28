@@ -11,11 +11,22 @@ const labels: Record<string, string> = {
     delivered: 'Entregado',
     cancelled: 'Cancelado',
     available: 'Disponible',
+    depleted: 'Agotado',
+    expired: 'Vencido',
     blocked: 'Bloqueado',
     open: 'Nueva',
     acknowledged: 'Reconocida',
     resolved: 'Resuelta',
     active: 'Activo',
+    inactive: 'Inactivo',
+    planned: 'Planificada',
+    in_progress: 'En curso',
+    completed: 'Completada',
+    approved: 'Aprobada',
+    low: 'Baja',
+    medium: 'Media',
+    high: 'Alta',
+    critical: 'Crítica',
 };
 
 const normalized = computed(() => props.status || 'active');
