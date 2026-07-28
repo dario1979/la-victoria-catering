@@ -108,4 +108,3 @@ Todos los endpoints comprobados respondieron HTTP 200. Los XLSX se entregaron co
 - `a1dcde2` — `fix(ui): harden operational dialogs and forms`
 - `f7ac243` — `fix(pwa): correct root scope and production safeguards`
 - `1c1cebc` — `chore(deps): update vulnerable runtime packages`
-
