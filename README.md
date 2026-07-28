@@ -20,6 +20,9 @@ docker compose up --build
 La aplicación queda en `http://localhost:8080`, la API en
 `http://localhost:8000/api/v1` y Mailpit en `http://localhost:8025`. El seeder
 crea usuarios por rol; su contraseña se toma de `DEMO_USER_PASSWORD`.
+El valor `123456` es únicamente para demo local. El contenedor rechaza el
+arranque con `APP_ENV=production` si esa contraseña sigue activa o si
+`APP_DEBUG` está habilitado.
 
 Para instalación local sin Docker se requiere PHP 8.4+, Composer y Node 22+.
 Ejecutar `scripts/install.ps1` en Windows o `scripts/install.sh` en Unix.
@@ -30,6 +33,7 @@ se envían mediante `X-Organization-ID` y `X-Branch-ID`.
 
 La PWA es *connected-first*: las mutaciones usan red exclusivamente y las
 acciones financieras se deshabilitan cuando el backend no está disponible.
+El service worker controla `/`, pero no cachea respuestas de `/api/v1`.
 
 ## Documentación
 

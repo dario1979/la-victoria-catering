@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import { api, configureApi } from '../api';
+import { api, configureApi, HttpError } from '../api';
 import type { Branch, SessionUser } from '../types';
 
 export const useSessionStore = defineStore('session', () => {
@@ -41,8 +41,12 @@ export const useSessionStore = defineStore('session', () => {
         try {
             await api.csrf();
             acceptUser(await api.me());
-        } catch {
-            user.value = null;
+        } catch (error) {
+            if (error instanceof HttpError && error.status === 401) {
+                user.value = null;
+                return;
+            }
+            throw error;
         }
     }
 

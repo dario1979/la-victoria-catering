@@ -10,6 +10,19 @@ mkdir -p \
 
 chown -R app:app storage bootstrap/cache
 
+if [ "${APP_ENV:-local}" = "production" ]; then
+    case "${APP_DEBUG:-false}" in
+        true|TRUE|1|yes|YES)
+            echo "Refusing to start production with APP_DEBUG enabled." >&2
+            exit 1
+            ;;
+    esac
+    if [ "${DEMO_USER_PASSWORD:-}" = "123456" ]; then
+        echo "Refusing to start production with the demo password." >&2
+        exit 1
+    fi
+fi
+
 if [ "${APP_KEY:-}" = "" ]; then
     key_file=storage/app.key
     if [ ! -s "$key_file" ]; then

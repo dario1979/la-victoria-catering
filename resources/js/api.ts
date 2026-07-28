@@ -25,9 +25,10 @@ export class HttpError extends Error implements ApiProblem {
 async function request<T>(
     path: string,
     init: RequestInit = {},
-    options: { idempotencyKey?: string; tenant?: boolean } = {},
+    options: { idempotencyKey?: string; tenant?: boolean; timeoutMs?: number } = {},
 ): Promise<T> {
-    const method = init.method ?? 'GET';
+    const method = (init.method ?? 'GET').toUpperCase();
+    const readOnly = method === 'GET' || method === 'HEAD';
     if (!navigator.onLine && method !== 'GET') {
         throw new HttpError({ message: 'Sin conexión. La operación no se envió.', status: 0, errors: {} });
     }
@@ -41,16 +42,26 @@ async function request<T>(
         headers.set('X-Branch-ID', String(branchId));
     }
     let response: Response;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? (readOnly ? 15_000 : 30_000));
+    const abortFromCaller = () => controller.abort();
+    if (init.signal?.aborted) controller.abort();
+    else init.signal?.addEventListener('abort', abortFromCaller, { once: true });
     try {
         response = await fetch(`/api/v1${path}`, {
-            ...init, headers, credentials: 'same-origin', cache: 'no-store',
+            ...init, headers, credentials: 'same-origin', cache: 'no-store', signal: controller.signal,
         });
     } catch {
         throw new HttpError({
-            message: 'Resultado desconocido: el servidor pudo haber aplicado la operación. Consultá su estado y reintentá con la misma clave.',
+            message: readOnly
+                ? 'No pudimos consultar el servidor. Revisá la conexión y reintentá.'
+                : 'Resultado desconocido: el servidor pudo haber aplicado la operación. Consultá su estado y reintentá con la misma clave.',
             status: 0,
             errors: {},
         });
+    } finally {
+        clearTimeout(timeout);
+        init.signal?.removeEventListener('abort', abortFromCaller);
     }
     const payload = await response.json().catch(() => ({})) as {
         message?: string; errors?: Record<string, string[]>;

@@ -10,9 +10,15 @@ export default defineConfig({
         vue(),
         VitePWA({
             registerType: 'autoUpdate',
+            base: '/',
+            buildBase: '/build/',
+            scope: '/',
             manifest: {
                 name: 'La Victoria Bakery',
                 short_name: 'La Victoria',
+                start_url: '/',
+                scope: '/',
+                lang: 'es',
                 theme_color: '#5f6252',
                 background_color: '#fffdf9',
                 display: 'standalone',

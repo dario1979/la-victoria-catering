@@ -74,16 +74,23 @@ function setConnection() {
     online.value = navigator.onLine;
 }
 
-function navigate(target: View) {
+function navigate(target: View, updateHistory = true) {
     if (!visibleNavigation.value.some((item) => item.id === target)) target = 'dashboard';
+    const previous = view.value;
     view.value = target;
     errors.value = [];
     notice.value = '';
     mobileMenuOpen.value = false;
     const url = new URL(location.href);
     url.hash = target === 'dashboard' ? '' : target;
-    history.replaceState(null, '', url);
+    if (updateHistory && previous !== target) history.pushState(null, '', url);
+    else history.replaceState(null, '', url);
     if (target === 'dashboard') void loadDashboard();
+}
+
+function restoreHistoryView() {
+    const target = location.hash.replace('#', '') as View;
+    navigate(validViews.includes(target) ? target : 'dashboard', false);
 }
 
 async function loadDashboard() {
@@ -176,10 +183,13 @@ function money(value: string) {
 onMounted(async () => {
     addEventListener('online', setConnection);
     addEventListener('offline', setConnection);
+    addEventListener('popstate', restoreHistoryView);
     try {
         await session.recover();
         if (!visibleNavigation.value.some((item) => item.id === view.value)) navigate('dashboard');
         if (session.authenticated && view.value === 'dashboard') await loadDashboard();
+    } catch (error) {
+        showError('No pudimos recuperar la sesión', errorMessages(error));
     } finally {
         recoveringSession.value = false;
     }
@@ -188,6 +198,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
     removeEventListener('online', setConnection);
     removeEventListener('offline', setConnection);
+    removeEventListener('popstate', restoreHistoryView);
 });
 </script>
 
