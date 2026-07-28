@@ -60,4 +60,30 @@ describe('BaseModal', () => {
         expect(wrapper.emitted('discard')).toHaveLength(1);
         expect(wrapper.emitted('close')).toHaveLength(1);
     });
+
+    it('traps focus inside the discard alert instead of covered form controls', async () => {
+        const wrapper = mount(BaseModal, {
+            attachTo: document.body,
+            props: { open: true, title: 'Editar cliente', dirty: true },
+            slots: { default: '<input aria-label="Nombre">' },
+        });
+        await nextTick();
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        await nextTick();
+
+        const alert = document.querySelector('[role="alertdialog"]') as HTMLElement;
+        const buttons = Array.from(alert.querySelectorAll('button'));
+        expect(document.activeElement).toBe(buttons[0]);
+
+        buttons[1].focus();
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab' }));
+        expect(document.activeElement).toBe(buttons[0]);
+
+        buttons[0].focus();
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true }));
+        expect(document.activeElement).toBe(buttons[1]);
+        expect(document.activeElement?.getAttribute('aria-label')).not.toBe('Nombre');
+
+        wrapper.unmount();
+    });
 });

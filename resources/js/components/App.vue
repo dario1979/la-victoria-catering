@@ -6,6 +6,7 @@ import { formatDateTime } from '../dates';
 import { useSessionStore } from '../stores/session';
 import type { DashboardAlert, DashboardMetrics, DashboardSummary, Order, View } from '../types';
 import DataState from './ui/DataState.vue';
+import BaseModal from './ui/BaseModal.vue';
 import MetricBlock from './ui/MetricBlock.vue';
 import OperationalPage from './OperationalPage.vue';
 import StatusBadge from './ui/StatusBadge.vue';
@@ -54,6 +55,9 @@ const pageTitle = computed(() => navigation.find((item) => item.id === view.valu
 const activeRole = computed(() => session.user?.organizations.find(
     (organization) => organization.id === session.organizationId,
 )?.pivot.role ?? '');
+const visibleNavigation = computed(() => navigation.filter((item) => (
+    item.id !== 'customers' || ['owner', 'admin', 'sales', 'finance'].includes(activeRole.value)
+)));
 const pageDescription = computed(() => ({
     dashboard: 'Prioridades y actividad de la sucursal activa.',
     customers: 'Relación comercial y datos de contacto.',
@@ -71,6 +75,7 @@ function setConnection() {
 }
 
 function navigate(target: View) {
+    if (!visibleNavigation.value.some((item) => item.id === target)) target = 'dashboard';
     view.value = target;
     errors.value = [];
     notice.value = '';
@@ -115,6 +120,7 @@ async function changeBranch(event: Event) {
 function logIn() {
     return run(async () => {
         await session.login(loginForm.email, loginForm.password);
+        if (!visibleNavigation.value.some((item) => item.id === view.value)) navigate('dashboard');
         await loadDashboard();
     });
 }
@@ -172,6 +178,7 @@ onMounted(async () => {
     addEventListener('offline', setConnection);
     try {
         await session.recover();
+        if (!visibleNavigation.value.some((item) => item.id === view.value)) navigate('dashboard');
         if (session.authenticated && view.value === 'dashboard') await loadDashboard();
     } finally {
         recoveringSession.value = false;
@@ -228,7 +235,7 @@ onBeforeUnmount(() => {
                 <section v-for="group in groups" :key="group" class="nav-group">
                     <p>{{ group }}</p>
                     <button
-                        v-for="item in navigation.filter((entry) => entry.group === group)"
+                        v-for="item in visibleNavigation.filter((entry) => entry.group === group)"
                         :key="item.id"
                         :class="{ active: view === item.id }"
                         :aria-current="view === item.id ? 'page' : undefined"
@@ -317,19 +324,23 @@ onBeforeUnmount(() => {
             />
 
             <nav class="mobile-navigation" aria-label="Navegación móvil">
-                <button v-for="item in navigation.filter(entry => primaryMobile.includes(entry.id))" :key="item.id" :class="{ active: view === item.id }" :aria-current="view === item.id ? 'page' : undefined" @click="navigate(item.id)">
+                <button v-for="item in visibleNavigation.filter(entry => primaryMobile.includes(entry.id))" :key="item.id" :class="{ active: view === item.id }" :aria-current="view === item.id ? 'page' : undefined" @click="navigate(item.id)">
                     <span aria-hidden="true">{{ item.icon }}</span>{{ item.label }}
                 </button>
-                <button :class="{ active: mobileMenuOpen }" :aria-expanded="mobileMenuOpen" @click="mobileMenuOpen = !mobileMenuOpen"><span aria-hidden="true">＋</span>Más</button>
+                <button :class="{ active: mobileMenuOpen }" :aria-expanded="mobileMenuOpen" aria-haspopup="dialog" @click="mobileMenuOpen = !mobileMenuOpen"><span aria-hidden="true">＋</span>Más</button>
             </nav>
-            <div v-if="mobileMenuOpen" class="mobile-more-menu">
-                <div class="mobile-more-sheet">
-                    <div class="panel-head"><h2>Más módulos</h2><button class="modal-close" aria-label="Cerrar menú" @click="mobileMenuOpen = false">×</button></div>
-                    <button v-for="item in navigation.filter(entry => !primaryMobile.includes(entry.id))" :key="item.id" :class="{ active: view === item.id }" @click="navigate(item.id)">
+            <BaseModal
+                :open="mobileMenuOpen"
+                title="Más módulos"
+                description="Elegí otra sección de la mesa operativa."
+                @close="mobileMenuOpen = false"
+            >
+                <nav class="mobile-more-sheet" aria-label="Más módulos">
+                    <button v-for="item in visibleNavigation.filter(entry => !primaryMobile.includes(entry.id))" :key="item.id" :class="{ active: view === item.id }" @click="navigate(item.id)">
                         <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>{{ item.label }}
                     </button>
-                </div>
-            </div>
+                </nav>
+            </BaseModal>
         </main>
     </div>
 </template>

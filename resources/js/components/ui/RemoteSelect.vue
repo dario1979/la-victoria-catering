@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, useId, watch } from 'vue';
 import { api, errorMessages } from '../../api';
 
 const props = withDefaults(defineProps<{
@@ -11,12 +11,18 @@ const props = withDefaults(defineProps<{
     selectedLabel?: string;
     placeholder?: string;
     disabled?: boolean;
+    name?: string;
+    required?: boolean;
+    filters?: Record<string, string>;
 }>(), {
     sort: 'id',
     secondaryKey: '',
     selectedLabel: '',
     placeholder: 'Buscar…',
     disabled: false,
+    name: '',
+    required: false,
+    filters: () => ({}),
 });
 
 const emit = defineEmits<{
@@ -31,6 +37,7 @@ const loading = ref(false);
 const failures = ref<string[]>([]);
 const activeIndex = ref(0);
 const chosenLabel = ref(props.selectedLabel);
+const listboxId = useId();
 let debounce: ReturnType<typeof setTimeout> | undefined;
 let sequence = 0;
 
@@ -54,7 +61,7 @@ async function load() {
     failures.value = [];
     try {
         const response = await api.page<Record<string, unknown>>(props.endpoint, {
-            page: 1, per_page: 10, search: search.value, sort: props.sort, direction: 'asc', filters: {},
+            page: 1, per_page: 10, search: search.value, sort: props.sort, direction: 'asc', filters: props.filters,
         });
         if (request !== sequence) return;
         options.value = response.data;
@@ -133,6 +140,10 @@ onBeforeUnmount(() => clearTimeout(debounce));
                 autocomplete="off"
                 :aria-expanded="open"
                 aria-autocomplete="list"
+                :aria-controls="listboxId"
+                :aria-activedescendant="open && options[activeIndex] ? `${listboxId}-option-${options[activeIndex].id}` : undefined"
+                :name="name"
+                :required="required"
                 :value="inputValue"
                 :placeholder="placeholder"
                 :disabled="disabled"
@@ -146,9 +157,10 @@ onBeforeUnmount(() => clearTimeout(debounce));
             <p v-if="loading" role="status">Buscando…</p>
             <p v-else-if="failures.length" role="alert">{{ failures.join(' ') }}</p>
             <p v-else-if="!options.length">No encontramos opciones.</p>
-            <ul v-else role="listbox">
+            <ul v-else :id="listboxId" role="listbox">
                 <li v-for="(option, index) in options" :key="String(option.id)">
                     <button
+                        :id="`${listboxId}-option-${option.id}`"
                         type="button"
                         role="option"
                         :aria-selected="Number(option.id) === modelValue"

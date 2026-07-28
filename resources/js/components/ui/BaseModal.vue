@@ -17,10 +17,12 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{ close: []; discard: [] }>();
 const modal = ref<HTMLElement | null>(null);
+const discardDialog = ref<HTMLElement | null>(null);
 const discardOpen = ref(false);
 const titleId = useId();
 const descriptionId = useId();
 let returnFocus: HTMLElement | null = null;
+let focusBeforeDiscard: HTMLElement | null = null;
 
 const focusableSelector = [
     'button:not([disabled])',
@@ -31,11 +33,11 @@ const focusableSelector = [
     '[tabindex]:not([tabindex="-1"])',
 ].join(',');
 
-function focusFirst() {
+function focusFirst(root?: HTMLElement | null) {
     void nextTick(() => {
-        const root = modal.value;
-        const preferred = root?.querySelector<HTMLElement>('[autofocus]');
-        const first = preferred ?? root?.querySelector<HTMLElement>(focusableSelector);
+        const target = root ?? (discardOpen.value ? discardDialog.value : modal.value);
+        const preferred = target?.querySelector<HTMLElement>('[autofocus]');
+        const first = preferred ?? target?.querySelector<HTMLElement>(focusableSelector);
         first?.focus();
     });
 }
@@ -43,6 +45,7 @@ function focusFirst() {
 function requestClose() {
     if (props.busy) return;
     if (props.dirty) {
+        focusBeforeDiscard = document.activeElement instanceof HTMLElement ? document.activeElement : null;
         discardOpen.value = true;
         focusFirst();
         return;
@@ -52,7 +55,7 @@ function requestClose() {
 
 function keepEditing() {
     discardOpen.value = false;
-    focusFirst();
+    void nextTick(() => focusBeforeDiscard?.focus());
 }
 
 function discard() {
@@ -70,8 +73,10 @@ function onKeydown(event: KeyboardEvent) {
         return;
     }
     if (event.key !== 'Tab' || !modal.value) return;
-    const focusable = Array.from(modal.value.querySelectorAll<HTMLElement>(focusableSelector))
-        .filter((element) => element.offsetParent !== null);
+    const focusRoot = discardOpen.value ? discardDialog.value : modal.value;
+    if (!focusRoot) return;
+    const focusable = Array.from(focusRoot.querySelectorAll<HTMLElement>(focusableSelector))
+        .filter((element) => !element.closest('[inert]'));
     if (!focusable.length) return;
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
@@ -117,7 +122,7 @@ onBeforeUnmount(() => {
                 :aria-labelledby="titleId"
                 :aria-describedby="description ? descriptionId : undefined"
             >
-                <header class="modal-header">
+                <header class="modal-header" :inert="discardOpen || undefined">
                     <div>
                         <h2 :id="titleId">{{ title }}</h2>
                         <p v-if="description" :id="descriptionId">{{ description }}</p>
@@ -125,15 +130,15 @@ onBeforeUnmount(() => {
                     <button class="modal-close" type="button" :disabled="busy" aria-label="Cerrar diálogo" @click="requestClose">×</button>
                 </header>
 
-                <div class="modal-body">
+                <div class="modal-body" :inert="discardOpen || undefined">
                     <slot />
                 </div>
 
-                <footer v-if="$slots.footer" class="modal-footer">
+                <footer v-if="$slots.footer" class="modal-footer" :inert="discardOpen || undefined">
                     <slot name="footer" :close="requestClose" />
                 </footer>
 
-                <div v-if="discardOpen" class="discard-shield" role="alertdialog" aria-modal="true" aria-labelledby="discard-title">
+                <div v-if="discardOpen" ref="discardDialog" class="discard-shield" role="alertdialog" aria-modal="true" aria-labelledby="discard-title">
                     <div class="discard-dialog">
                         <p class="section-kicker">Cambios sin guardar</p>
                         <h3 id="discard-title">¿Descartar los cambios?</h3>

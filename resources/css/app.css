@@ -72,7 +72,7 @@ button, input, select, textarea { min-height: 44px; }
 .sidebar nav { display: grid; gap: var(--space-3); min-height: 0; overflow-y: auto; }
 .nav-group { display: grid; gap: 2px; }
 .nav-group > p {
-    margin: var(--space-2) var(--space-2) var(--space-1); color: #bba79a;
+    margin: var(--space-2) var(--space-2) var(--space-1); color: #d2c0b4;
     font-size: .62rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
 }
 .sidebar nav button {
@@ -363,7 +363,7 @@ body.modal-open { overflow: hidden; }
 .remote-select { position: relative; }
 .remote-select-control { position: relative; }
 .remote-select-clear {
-    position: absolute; top: calc(50% + .18rem); right: 4px; width: 40px; min-height: 40px;
+    position: absolute; top: calc(50% + .18rem); right: 2px; width: 44px; min-height: 44px;
     transform: translateY(-50%); border: 0; color: var(--ink-muted); background: white;
 }
 .remote-select-popover {
@@ -408,7 +408,13 @@ body.modal-open { overflow: hidden; }
 .order-list strong, .order-list span { display: block; }
 .order-list div span { margin-top: .2rem; color: var(--ink-muted); font-size: .75rem; }
 
-.mobile-more-menu { display: none; }
+.mobile-more-sheet { display: grid; gap: var(--space-2); }
+.mobile-more-sheet button {
+    display: flex; align-items: center; gap: var(--space-2); min-height: 44px;
+    border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--ink);
+    background: var(--surface); padding: var(--space-3); text-align: left;
+}
+.mobile-more-sheet button:hover, .mobile-more-sheet button.active { background: var(--surface-muted); }
 
 .login-page {
     display: grid; min-height: 100vh; grid-template-columns: minmax(320px, 1.1fr) minmax(390px, .9fr);
@@ -463,20 +469,9 @@ body.modal-open { overflow: hidden; }
     }
     .mobile-navigation button span { font-size: .64rem; font-weight: 800; }
     .mobile-navigation button.active { color: var(--terracotta-dark); background: var(--surface-muted); }
-    .mobile-more-menu {
-        position: fixed; inset: 0; z-index: 80; display: grid; align-items: end;
-        background: rgba(45, 34, 27, .48);
-    }
     .mobile-more-sheet {
         display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2);
-        border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--surface);
-        padding: var(--space-4) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
-    }
-    .mobile-more-sheet .panel-head { grid-column: 1 / -1; margin-bottom: var(--space-2); }
-    .mobile-more-sheet button:not(.modal-close) {
-        display: flex; align-items: center; gap: var(--space-2); border: 1px solid var(--line);
-        border-radius: var(--radius-sm); color: var(--ink); background: var(--surface);
-        padding: var(--space-3); text-align: left;
+        padding-bottom: env(safe-area-inset-bottom);
     }
     .modal-backdrop { padding: 0; }
     .base-modal, .modal-wide, .modal-large, .modal-full {

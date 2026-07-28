@@ -1,16 +1,28 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
+import { computed, nextTick, reactive, ref, useId } from 'vue';
 import { api, errorMessages, HttpError, idempotencyKey } from '../api';
 import { formatCalendarDate, formatDateTime } from '../dates';
-import type { DataTableColumn, DataTableFilter, DataTableRowAction, OrderStatus, Payment, View } from '../types';
+import {
+    activeOptions,
+    deliveryLabel,
+    operationalEndpoints,
+    operationalPageContent,
+    paymentMethod,
+    productType,
+    statusLabel,
+    unitLabel,
+} from '../operational';
+import type { OperationalModuleView } from '../operational';
+import type { DataTableColumn, DataTableFilter, DataTableRowAction, OrderStatus, Payment } from '../types';
 import DataTableRowActions from './data-table/DataTableRowActions.vue';
 import ServerDataTable from './data-table/ServerDataTable.vue';
+import OperationalDetail from './OperationalDetail.vue';
 import BaseModal from './ui/BaseModal.vue';
 import ConfirmActionModal from './ui/ConfirmActionModal.vue';
 import RemoteSelect from './ui/RemoteSelect.vue';
 import StatusBadge from './ui/StatusBadge.vue';
 
-type ModuleView = Exclude<View, 'dashboard'>;
+type ModuleView = OperationalModuleView;
 type ModalMode =
     | 'create'
     | 'edit'
@@ -33,6 +45,7 @@ const props = defineProps<{
 const emit = defineEmits<{ notice: [message: string]; error: [title: string, messages: string[]] }>();
 
 const operationalTable = ref<InstanceType<typeof ServerDataTable> | null>(null);
+const formId = `operational-form-${useId()}`;
 const busy = ref(false);
 const formDirty = ref(false);
 const fieldErrors = ref<Record<string, string[]>>({});
@@ -115,30 +128,6 @@ let productionKey = idempotencyKey('production');
 let productionActionKey = idempotencyKey('production-action');
 let transitionKey = idempotencyKey('transition');
 let deliveryKey = idempotencyKey('delivery');
-
-const pageContent: Record<ModuleView, { title: string; description: string; action?: string; empty: string }> = {
-    customers: { title: 'Clientes', description: 'Contacto, condición comercial y estado de cada cliente.', action: 'Nuevo cliente', empty: 'cliente' },
-    products: { title: 'Productos', description: 'Catálogo, unidades, precios y niveles mínimos.', action: 'Nuevo producto', empty: 'producto' },
-    locations: { title: 'Ubicaciones', description: 'Depósitos y sectores habilitados en la sucursal.', action: 'Nueva ubicación', empty: 'ubicación' },
-    lots: { title: 'Inventario por lote', description: 'Disponibilidad, reservas y vencimientos con criterio FEFO.', action: 'Registrar recepción', empty: 'lote' },
-    orders: { title: 'Pedidos', description: 'Seguimiento comercial desde el alta hasta la entrega.', action: 'Nuevo pedido', empty: 'pedido' },
-    recipes: { title: 'Recetas', description: 'Versiones, rendimiento e ingredientes de producción.', action: 'Nueva receta', empty: 'receta' },
-    production: { title: 'Producción', description: 'Órdenes, requerimientos, rendimiento, merma y trazabilidad.', action: 'Nueva orden', empty: 'orden' },
-    payments: { title: 'Cobranzas', description: 'Pagos registrados y saldo de los pedidos.', action: 'Registrar pago', empty: 'pago' },
-    alerts: { title: 'Alertas', description: 'Situaciones operativas que requieren revisión o acción.', empty: 'alerta' },
-};
-
-const endpoints: Record<ModuleView, string> = {
-    customers: '/customers',
-    products: '/products',
-    locations: '/locations',
-    lots: '/lots',
-    orders: '/orders',
-    recipes: '/recipes',
-    production: '/production-orders',
-    payments: '/payments',
-    alerts: '/alerts',
-};
 
 const columns: Record<ModuleView, DataTableColumn[]> = {
     customers: [
@@ -234,8 +223,8 @@ const filters: Record<ModuleView, DataTableFilter[]> = {
     ],
 };
 
-const content = computed(() => pageContent[props.view]);
-const endpoint = computed(() => endpoints[props.view]);
+const content = computed(() => operationalPageContent[props.view]);
+const endpoint = computed(() => operationalEndpoints[props.view]);
 const tableColumns = computed(() => columns[props.view]);
 const tableFilters = computed(() => filters[props.view]);
 const modalTitle = computed(() => {
@@ -306,6 +295,28 @@ function resetModalState() {
     selectedRecipeLabel.value = '';
 }
 
+function fieldErrorId(name: string) {
+    return `field-error-${name.replace(/[^a-z0-9_-]+/gi, '-')}`;
+}
+
+function linkFieldErrors() {
+    void nextTick(() => {
+        const form = document.getElementById(formId);
+        form?.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('[name]')
+            .forEach((control) => {
+                const error = fieldError(control.name);
+                if (error) {
+                    control.setAttribute('aria-invalid', 'true');
+                    control.setAttribute('aria-describedby', fieldErrorId(control.name));
+                } else {
+                    control.removeAttribute('aria-invalid');
+                    control.removeAttribute('aria-describedby');
+                }
+            });
+        form?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+    });
+}
+
 function openCreate(mode: ModalMode = 'create', row: Record<string, any> | null = null) {
     if (mode === 'create' && !canCreate.value) return;
     resetModalState();
@@ -357,6 +368,7 @@ async function openDetail(row: Record<string, any>, mode: ModalMode = 'detail') 
                 : await api.get<Record<string, any>>(path);
         }
     } catch (error) {
+        closeModal();
         emit('error', 'No pudimos cargar el detalle', errorMessages(error));
     } finally {
         detailLoading.value = false;
@@ -380,8 +392,13 @@ async function handleRowAction(row: Record<string, any>, action: string) {
         modal.row = row;
         modal.mode = 'order-transition';
         modal.open = true;
-        allowedTransitions.value = await api.get<OrderStatus[]>(`/orders/${row.id}/allowed-transitions`);
-        transitionForm.status = allowedTransitions.value[0] ?? 'confirmed';
+        try {
+            allowedTransitions.value = await api.get<OrderStatus[]>(`/orders/${row.id}/allowed-transitions`);
+            transitionForm.status = allowedTransitions.value[0] ?? 'confirmed';
+        } catch (error) {
+            closeModal();
+            emit('error', 'No pudimos consultar los cambios disponibles', errorMessages(error));
+        }
         return;
     }
     if (action === 'delivery') {
@@ -444,13 +461,18 @@ async function mutate(action: () => Promise<Record<string, any> | void>, success
         refresh(id);
         emit('notice', success);
     } catch (error) {
-        if (error instanceof HttpError) fieldErrors.value = error.errors;
+        if (error instanceof HttpError) {
+            fieldErrors.value = error.errors;
+            if (error.status === 422) linkFieldErrors();
+        }
         const title = error instanceof HttpError && error.status === 0
             ? 'Resultado desconocido'
             : error instanceof HttpError && error.status === 422
                 ? 'Revisá los datos ingresados'
                 : 'No pudimos completar la operación';
-        emit('error', title, errorMessages(error));
+        if (! (error instanceof HttpError && error.status === 422)) {
+            emit('error', title, errorMessages(error));
+        }
     } finally {
         busy.value = false;
     }
@@ -710,10 +732,6 @@ function removeIngredient(index: number) {
     formDirty.value = true;
 }
 
-function activeOptions() {
-    return [{ label: 'Activos', value: '1' }, { label: 'Inactivos', value: '0' }];
-}
-
 function can(...roles: string[]) {
     return roles.includes(props.role);
 }
@@ -725,33 +743,6 @@ function money(value: string | number) {
 function decimalSubtract(left: unknown, right: unknown) {
     const cents = Math.max(0, Math.round(Number(left ?? 0) * 100) - Math.round(Number(right ?? 0) * 100));
     return (cents / 100).toFixed(2);
-}
-
-function statusLabel(value: string) {
-    return ({
-        draft: 'Borrador', confirmed: 'Confirmado', in_production: 'En producción', ready: 'Listo',
-        delivered: 'Entregado', cancelled: 'Cancelado', planned: 'Planificada', in_progress: 'En curso',
-        completed: 'Completada', approved: 'Aprobada', inactive: 'Inactiva', available: 'Disponible',
-        depleted: 'Agotado', blocked: 'Bloqueado', expired: 'Vencido', open: 'Abierta',
-        acknowledged: 'Reconocida', resolved: 'Resuelta', low: 'Baja', medium: 'Media',
-        high: 'Alta', critical: 'Crítica', active: 'Activo',
-    } as Record<string, string>)[value] ?? value;
-}
-
-function productType(value: string) {
-    return ({ raw_material: 'Materia prima', semi_finished: 'Semielaborado', finished_product: 'Producto terminado', packaging: 'Empaque' } as Record<string, string>)[value] ?? value;
-}
-
-function unitLabel(value: string) {
-    return ({ unit: 'unidad', kg: 'kg', g: 'g', l: 'l', ml: 'ml' } as Record<string, string>)[value] ?? value;
-}
-
-function paymentMethod(value: string) {
-    return ({ cash: 'Efectivo', transfer: 'Transferencia', mercadopago: 'Mercado Pago', card: 'Tarjeta' } as Record<string, string>)[value] ?? value;
-}
-
-function deliveryLabel(value: string) {
-    return ({ pickup: 'Retiro', delivery: 'Reparto', '': 'Sin definir' } as Record<string, string>)[value] ?? value;
 }
 
 function localDateTime() {
@@ -819,93 +810,93 @@ function recipeSelectionLabel(row: Record<string, unknown> | null) {
     >
         <div v-if="detailLoading" class="modal-loading" role="status">Cargando información…</div>
 
-        <form v-else-if="isFormModal" class="form-grid modal-form" @submit.prevent="submitForm" @input="formDirty = true">
+        <form v-else-if="isFormModal" :id="formId" class="form-grid modal-form" @submit.prevent="submitForm" @input="formDirty = true">
             <template v-if="view === 'customers'">
                 <label class="wide">Nombre o razón social
-                    <input v-model="customerForm.name" autofocus required maxlength="255" :aria-invalid="Boolean(fieldError('name'))">
-                    <small v-if="fieldError('name')" class="field-error">{{ fieldError('name') }}</small>
+                    <input v-model="customerForm.name" name="name" autofocus required maxlength="255" :aria-invalid="Boolean(fieldError('name'))" :aria-describedby="fieldError('name') ? fieldErrorId('name') : undefined">
+                    <small v-if="fieldError('name')" :id="fieldErrorId('name')" class="field-error">{{ fieldError('name') }}</small>
                 </label>
-                <label>CUIT o documento<input v-model="customerForm.tax_id" maxlength="32"></label>
-                <label>Condición fiscal<input v-model="customerForm.tax_condition" maxlength="64"></label>
-                <label>Correo electrónico<input v-model="customerForm.email" type="email"></label>
-                <label>Teléfono<input v-model="customerForm.phone" maxlength="64"></label>
-                <label>Límite de crédito<input v-model="customerForm.credit_limit" min="0" step="0.01" type="number"></label>
-                <label class="check-field"><input v-model="customerForm.active" type="checkbox"> Cliente activo</label>
+                <label>CUIT o documento<input v-model="customerForm.tax_id" name="tax_id" maxlength="32"></label>
+                <label>Condición fiscal<input v-model="customerForm.tax_condition" name="tax_condition" maxlength="64"></label>
+                <label>Correo electrónico<input v-model="customerForm.email" name="email" type="email"></label>
+                <label>Teléfono<input v-model="customerForm.phone" name="phone" maxlength="64"></label>
+                <label>Límite de crédito<input v-model="customerForm.credit_limit" name="credit_limit" min="0" step="0.01" type="number"></label>
+                <label class="check-field"><input v-model="customerForm.active" name="active" type="checkbox"> Cliente activo</label>
             </template>
 
             <template v-else-if="view === 'products'">
-                <label class="wide">Nombre<input v-model="productForm.name" autofocus required maxlength="255"></label>
-                <label>Tipo<select v-model="productForm.type"><option value="raw_material">Materia prima</option><option value="semi_finished">Semielaborado</option><option value="finished_product">Producto terminado</option><option value="packaging">Empaque</option></select></label>
-                <label>Unidad<select v-model="productForm.unit"><option value="unit">Unidad</option><option value="kg">Kilogramo</option><option value="g">Gramo</option><option value="l">Litro</option><option value="ml">Mililitro</option></select></label>
-                <label>Stock mínimo<input v-model="productForm.minimum_stock" required min="0" step="0.001" type="number"></label>
-                <label>Precio<input v-model="productForm.price" required min="0" step="0.01" type="number"></label>
-                <label class="check-field"><input v-model="productForm.active" type="checkbox"> Producto activo</label>
+                <label class="wide">Nombre<input v-model="productForm.name" name="name" autofocus required maxlength="255"></label>
+                <label>Tipo<select v-model="productForm.type" name="type"><option value="raw_material">Materia prima</option><option value="semi_finished">Semielaborado</option><option value="finished_product">Producto terminado</option><option value="packaging">Empaque</option></select></label>
+                <label>Unidad<select v-model="productForm.unit" name="unit"><option value="unit">Unidad</option><option value="kg">Kilogramo</option><option value="g">Gramo</option><option value="l">Litro</option><option value="ml">Mililitro</option></select></label>
+                <label>Stock mínimo<input v-model="productForm.minimum_stock" name="minimum_stock" required min="0" step="0.001" type="number"></label>
+                <label>Precio<input v-model="productForm.price" name="price" required min="0" step="0.01" type="number"></label>
+                <label class="check-field"><input v-model="productForm.active" name="active" type="checkbox"> Producto activo</label>
             </template>
 
             <template v-else-if="view === 'locations'">
-                <label class="wide">Nombre de la ubicación<input v-model="locationForm.name" autofocus required maxlength="255" placeholder="Ej.: Cámara Centro"></label>
-                <label class="check-field wide"><input v-model="locationForm.active" type="checkbox"> Ubicación activa</label>
+                <label class="wide">Nombre de la ubicación<input v-model="locationForm.name" name="name" autofocus required maxlength="255" placeholder="Ej.: Cámara Centro"></label>
+                <label class="check-field wide"><input v-model="locationForm.active" name="active" type="checkbox"> Ubicación activa</label>
             </template>
 
             <template v-else-if="view === 'lots'">
                 <template v-if="modal.mode !== 'lot-adjust'">
                     <label>Producto
-                        <RemoteSelect v-model="lotForm.product_id" endpoint="/products" sort="name" label-key="name" secondary-key="unit" placeholder="Buscar producto" @selected="selectedProductLabel = $event ? String($event.name) : ''" />
+                        <RemoteSelect v-model="lotForm.product_id" name="product_id" required endpoint="/products" sort="name" label-key="name" secondary-key="unit" placeholder="Buscar producto" @selected="selectedProductLabel = $event ? String($event.name) : ''" />
                     </label>
                     <label>Ubicación
-                        <RemoteSelect v-model="lotForm.location_id" endpoint="/locations" sort="name" label-key="name" placeholder="Buscar ubicación" @selected="selectedLocationLabel = $event ? String($event.name) : ''" />
+                        <RemoteSelect v-model="lotForm.location_id" name="location_id" required endpoint="/locations" sort="name" label-key="name" placeholder="Buscar ubicación" @selected="selectedLocationLabel = $event ? String($event.name) : ''" />
                     </label>
-                    <label>Código de lote<input v-model="lotForm.code" required maxlength="128"></label>
-                    <label>Unidad<select v-model="lotForm.unit"><option value="unit">Unidad</option><option value="kg">Kilogramo</option><option value="g">Gramo</option><option value="l">Litro</option><option value="ml">Mililitro</option></select></label>
-                    <label>Vencimiento<input v-model="lotForm.expires_at" type="date"></label>
+                    <label>Código de lote<input v-model="lotForm.code" name="code" required maxlength="128"></label>
+                    <label>Unidad<select v-model="lotForm.unit" name="unit"><option value="unit">Unidad</option><option value="kg">Kilogramo</option><option value="g">Gramo</option><option value="l">Litro</option><option value="ml">Mililitro</option></select></label>
+                    <label>Vencimiento<input v-model="lotForm.expires_at" name="expires_at" type="date"></label>
                 </template>
                 <div v-else class="form-context wide"><strong>{{ modal.row?.product?.name }}</strong><span>Lote {{ modal.row?.code }} · disponible {{ modal.row?.quantity }} {{ unitLabel(modal.row?.unit) }}</span></div>
-                <label>Cantidad<input v-model="lotForm.quantity" autofocus required step="0.001" type="number" :placeholder="modal.mode === 'lot-adjust' ? 'Usá negativo para descontar' : ''"></label>
-                <label>Tipo<select v-model="lotForm.type"><option value="receipt">Recepción</option><option value="adjustment">Ajuste</option><option value="waste">Merma</option><option value="reversal">Reversión</option></select></label>
-                <label class="wide">Motivo<input v-model="lotForm.reason" required maxlength="255"></label>
+                <label>Cantidad<input v-model="lotForm.quantity" name="quantity" autofocus required step="0.001" type="number" :placeholder="modal.mode === 'lot-adjust' ? 'Usá negativo para descontar' : ''"></label>
+                <label>Tipo<select v-model="lotForm.type" name="type"><option value="receipt">Recepción</option><option value="adjustment">Ajuste</option><option value="waste">Merma</option><option value="reversal">Reversión</option></select></label>
+                <label class="wide">Motivo<input v-model="lotForm.reason" name="reason" required maxlength="255"></label>
             </template>
 
             <template v-else-if="view === 'orders' && modal.mode === 'create'">
                 <label>Cliente registrado
-                    <RemoteSelect v-model="orderForm.customer_id" endpoint="/customers" sort="name" label-key="name" secondary-key="tax_id" placeholder="Buscar cliente" @selected="selectedOrderLabel = $event ? String($event.name) : ''" />
+                    <RemoteSelect v-model="orderForm.customer_id" name="customer_id" endpoint="/customers" sort="name" label-key="name" secondary-key="tax_id" placeholder="Buscar cliente" @selected="selectedOrderLabel = $event ? String($event.name) : ''" />
                 </label>
-                <label v-if="!orderForm.customer_id">O nombre de mostrador<input v-model="orderForm.customer_name" :required="!orderForm.customer_id" maxlength="255"></label>
-                <label>Fecha requerida<input v-model="orderForm.required_at" type="datetime-local"></label>
+                <label v-if="!orderForm.customer_id">O nombre de mostrador<input v-model="orderForm.customer_name" name="customer_name" :required="!orderForm.customer_id" maxlength="255"></label>
+                <label>Fecha requerida<input v-model="orderForm.required_at" name="required_at" type="datetime-local"></label>
                 <div class="form-section wide"><h3>Producto solicitado</h3><p>La primera versión operativa admite un renglón por pedido.</p></div>
                 <label>Producto
-                    <RemoteSelect v-model="orderForm.product_id" endpoint="/products" sort="name" label-key="name" secondary-key="unit" placeholder="Buscar producto" @selected="selectedProductLabel = $event ? String($event.name) : ''" />
+                    <RemoteSelect v-model="orderForm.product_id" name="items.0.product_id" required endpoint="/products" sort="name" label-key="name" secondary-key="unit" placeholder="Buscar producto" @selected="selectedProductLabel = $event ? String($event.name) : ''" />
                 </label>
-                <label>Cantidad<input v-model="orderForm.quantity" required min="0.001" step="0.001" type="number"></label>
-                <label>Precio unitario<input v-model="orderForm.unit_price" required min="0" step="0.01" type="number"></label>
+                <label>Cantidad<input v-model="orderForm.quantity" name="items.0.quantity" required min="0.001" step="0.001" type="number"></label>
+                <label>Precio unitario<input v-model="orderForm.unit_price" name="items.0.unit_price" required min="0" step="0.01" type="number"></label>
             </template>
 
             <template v-else-if="modal.mode === 'order-transition'">
                 <div class="form-context wide"><strong>Pedido #{{ modal.row?.id }} · {{ modal.row?.customer_name }}</strong><span>Estado actual: {{ statusLabel(modal.row?.status) }}</span></div>
-                <label class="wide">Nuevo estado<select v-model="transitionForm.status" autofocus><option v-for="status in allowedTransitions" :key="status" :value="status">{{ statusLabel(status) }}</option></select></label>
+                <label class="wide">Nuevo estado<select v-model="transitionForm.status" name="status" autofocus><option v-for="status in allowedTransitions" :key="status" :value="status">{{ statusLabel(status) }}</option></select></label>
             </template>
 
             <template v-else-if="modal.mode === 'order-delivery'">
                 <div class="form-context wide"><strong>Pedido #{{ modal.row?.id }} · {{ modal.row?.customer_name }}</strong><span>Total {{ money(modal.row?.total) }} · estado {{ statusLabel(modal.row?.status) }}</span></div>
-                <label>Método<select v-model="deliveryForm.method" autofocus><option value="pickup">Retiro</option><option value="delivery">Reparto</option></select></label>
-                <label class="wide">Observaciones<textarea v-model="deliveryForm.notes" maxlength="2000" rows="3"></textarea></label>
+                <label>Método<select v-model="deliveryForm.method" name="method" autofocus><option value="pickup">Retiro</option><option value="delivery">Reparto</option></select></label>
+                <label class="wide">Observaciones<textarea v-model="deliveryForm.notes" name="notes" maxlength="2000" rows="3"></textarea></label>
             </template>
 
             <template v-else-if="view === 'recipes'">
                 <label>Producto elaborado
-                    <RemoteSelect v-model="recipeForm.product_id" endpoint="/products" sort="name" label-key="name" secondary-key="unit" placeholder="Buscar producto terminado" @selected="selectedProductLabel = $event ? String($event.name) : ''" />
+                    <RemoteSelect v-model="recipeForm.product_id" name="product_id" required endpoint="/products" sort="name" label-key="name" secondary-key="unit" placeholder="Buscar producto terminado" @selected="selectedProductLabel = $event ? String($event.name) : ''" />
                 </label>
-                <label>Rendimiento esperado<input v-model="recipeForm.expected_yield" required min="0.001" step="0.001" type="number"></label>
-                <label>Unidad<select v-model="recipeForm.yield_unit"><option value="unit">Unidad</option><option value="kg">Kilogramo</option><option value="g">Gramo</option><option value="l">Litro</option><option value="ml">Mililitro</option></select></label>
-                <label>Merma teórica %<input v-model="recipeForm.theoretical_waste_percent" min="0" max="100" step="0.01" type="number"></label>
-                <label>Estado<select v-model="recipeForm.status"><option value="draft">Borrador</option><option value="approved">Aprobada</option></select></label>
+                <label>Rendimiento esperado<input v-model="recipeForm.expected_yield" name="expected_yield" required min="0.001" step="0.001" type="number"></label>
+                <label>Unidad<select v-model="recipeForm.yield_unit" name="yield_unit"><option value="unit">Unidad</option><option value="kg">Kilogramo</option><option value="g">Gramo</option><option value="l">Litro</option><option value="ml">Mililitro</option></select></label>
+                <label>Merma teórica %<input v-model="recipeForm.theoretical_waste_percent" name="theoretical_waste_percent" min="0" max="100" step="0.01" type="number"></label>
+                <label>Estado<select v-model="recipeForm.status" name="status"><option value="draft">Borrador</option><option value="approved">Aprobada</option></select></label>
                 <div class="ingredient-editor wide">
                     <div class="form-section"><h3>Ingredientes</h3><button class="secondary" type="button" @click="addIngredient">Agregar ingrediente</button></div>
                     <div v-for="(item, index) in recipeForm.items" :key="index" class="ingredient-row">
                         <label>Ingrediente
-                            <RemoteSelect v-model="item.ingredient_product_id" endpoint="/products" sort="name" label-key="name" secondary-key="unit" placeholder="Buscar ingrediente" />
+                            <RemoteSelect v-model="item.ingredient_product_id" :name="`items.${index}.ingredient_product_id`" required endpoint="/products" sort="name" label-key="name" secondary-key="unit" placeholder="Buscar ingrediente" />
                         </label>
-                        <label>Cantidad<input v-model="item.quantity" min="0.001" step="0.001" required type="number"></label>
-                        <label>Unidad<select v-model="item.unit"><option value="unit">Unidad</option><option value="kg">kg</option><option value="g">g</option><option value="l">l</option><option value="ml">ml</option></select></label>
+                        <label>Cantidad<input v-model="item.quantity" :name="`items.${index}.quantity`" min="0.001" step="0.001" required type="number"></label>
+                        <label>Unidad<select v-model="item.unit" :name="`items.${index}.unit`"><option value="unit">Unidad</option><option value="kg">kg</option><option value="g">g</option><option value="l">l</option><option value="ml">ml</option></select></label>
                         <button class="text-button danger-text" type="button" :disabled="recipeForm.items.length === 1" @click="removeIngredient(index)">Quitar</button>
                     </div>
                 </div>
@@ -913,128 +904,56 @@ function recipeSelectionLabel(row: Record<string, unknown> | null) {
 
             <template v-else-if="view === 'production' && modal.mode === 'create'">
                 <label>Pedido
-                    <RemoteSelect v-model="productionForm.order_id" endpoint="/orders" sort="id" label-key="customer_name" secondary-key="status" placeholder="Buscar pedido por cliente" @selected="selectedOrderLabel = $event ? `Pedido #${$event.id} · ${$event.customer_name}` : ''" />
+                    <RemoteSelect v-model="productionForm.order_id" name="order_id" required endpoint="/orders" sort="id" label-key="customer_name" secondary-key="status" :filters="{ status: 'confirmed' }" placeholder="Buscar pedido confirmado" @selected="selectedOrderLabel = $event ? `Pedido #${$event.id} · ${$event.customer_name}` : ''" />
                 </label>
                 <label>Receta aprobada
-                    <RemoteSelect v-model="productionForm.recipe_id" endpoint="/recipes" sort="id" label-key="product.name" secondary-key="version" placeholder="Buscar receta" @selected="selectedRecipeLabel = recipeSelectionLabel($event)" />
+                    <RemoteSelect v-model="productionForm.recipe_id" name="recipe_id" required endpoint="/recipes" sort="id" label-key="product.name" secondary-key="version" :filters="{ status: 'approved' }" placeholder="Buscar receta aprobada" @selected="selectedRecipeLabel = recipeSelectionLabel($event)" />
                 </label>
-                <label>Cantidad planificada<input v-model="productionForm.planned_quantity" required min="0.001" step="0.001" type="number"></label>
-                <label>Unidad<select v-model="productionForm.unit"><option value="unit">Unidad</option><option value="kg">kg</option><option value="g">g</option><option value="l">l</option><option value="ml">ml</option></select></label>
+                <label>Cantidad planificada<input v-model="productionForm.planned_quantity" name="planned_quantity" required min="0.001" step="0.001" type="number"></label>
+                <label>Unidad<select v-model="productionForm.unit" name="unit"><option value="unit">Unidad</option><option value="kg">kg</option><option value="g">g</option><option value="l">l</option><option value="ml">ml</option></select></label>
             </template>
 
             <template v-else-if="modal.mode === 'production-complete'">
                 <div class="form-context wide"><strong>Orden #{{ modal.row?.id }} · {{ modal.row?.recipe?.product?.name }}</strong><span>Planificado: {{ modal.row?.planned_quantity }} {{ unitLabel(modal.row?.unit) }}</span></div>
-                <label>Rendimiento real<input v-model="productionForm.actual_yield" autofocus required min="0" step="0.001" type="number"></label>
-                <label>Merma<input v-model="productionForm.waste_quantity" required min="0" step="0.001" type="number"></label>
-                <label>Unidad<select v-model="productionForm.unit"><option value="unit">Unidad</option><option value="kg">kg</option><option value="g">g</option><option value="l">l</option><option value="ml">ml</option></select></label>
+                <label>Rendimiento real<input v-model="productionForm.actual_yield" name="actual_yield" autofocus required min="0" step="0.001" type="number"></label>
+                <label>Merma<input v-model="productionForm.waste_quantity" name="waste_quantity" required min="0" step="0.001" type="number"></label>
+                <label>Unidad<select v-model="productionForm.unit" name="unit"><option value="unit">Unidad</option><option value="kg">kg</option><option value="g">g</option><option value="l">l</option><option value="ml">ml</option></select></label>
                 <label>Ubicación destino
-                    <RemoteSelect v-model="productionForm.destination_location_id" endpoint="/locations" sort="name" label-key="name" placeholder="Buscar ubicación" @selected="selectedLocationLabel = $event ? String($event.name) : ''" />
+                    <RemoteSelect v-model="productionForm.destination_location_id" name="destination_location_id" required endpoint="/locations" sort="name" label-key="name" placeholder="Buscar ubicación" @selected="selectedLocationLabel = $event ? String($event.name) : ''" />
                 </label>
-                <label>Elaboración<input v-model="productionForm.manufactured_at" required type="datetime-local"></label>
-                <label>Vencimiento<input v-model="productionForm.expires_at" type="date"></label>
-                <label class="wide">Observaciones<textarea v-model="productionForm.observations" maxlength="4000" rows="3"></textarea></label>
+                <label>Elaboración<input v-model="productionForm.manufactured_at" name="manufactured_at" required type="datetime-local"></label>
+                <label>Vencimiento<input v-model="productionForm.expires_at" name="expires_at" type="date"></label>
+                <label class="wide">Observaciones<textarea v-model="productionForm.observations" name="observations" maxlength="4000" rows="3"></textarea></label>
             </template>
 
             <template v-else-if="modal.mode === 'payment-create' || view === 'payments'">
                 <div v-if="modal.row" class="form-context wide"><strong>Pedido #{{ modal.row.id }} · {{ modal.row.customer_name }}</strong><span>Saldo pendiente: {{ money(decimalSubtract(modal.row.total, modal.row.paid_total)) }}</span></div>
                 <label v-else>Pedido
-                    <RemoteSelect v-model="paymentForm.order_id" endpoint="/orders" sort="id" label-key="customer_name" secondary-key="status" placeholder="Buscar pedido por cliente" @selected="selectedOrderLabel = $event ? `Pedido #${$event.id} · ${$event.customer_name}` : ''" />
+                    <RemoteSelect v-model="paymentForm.order_id" name="order_id" required endpoint="/orders" sort="id" label-key="customer_name" secondary-key="status" placeholder="Buscar pedido por cliente" @selected="selectedOrderLabel = $event ? `Pedido #${$event.id} · ${$event.customer_name}` : ''" />
                 </label>
-                <label>Importe<input v-model="paymentForm.amount" autofocus required min="0.01" step="0.01" type="number"></label>
-                <label>Medio<select v-model="paymentForm.method"><option value="cash">Efectivo</option><option value="transfer">Transferencia</option><option value="mercadopago">Mercado Pago</option><option value="card">Tarjeta</option></select></label>
-                <label>Referencia externa<input v-model="paymentForm.external_reference" maxlength="255" placeholder="Opcional"></label>
+                <label>Importe<input v-model="paymentForm.amount" name="amount" autofocus required min="0.01" step="0.01" type="number"></label>
+                <label>Medio<select v-model="paymentForm.method" name="method"><option value="cash">Efectivo</option><option value="transfer">Transferencia</option><option value="mercadopago">Mercado Pago</option><option value="card">Tarjeta</option></select></label>
+                <label>Referencia externa<input v-model="paymentForm.external_reference" name="external_reference" maxlength="255" placeholder="Opcional"></label>
             </template>
 
-            <div v-if="Object.keys(fieldErrors).length" class="form-error-summary wide" role="alert">
+            <div v-if="Object.keys(fieldErrors).length" id="form-errors" class="form-error-summary wide" role="alert">
                 <strong>Revisá los campos marcados</strong>
                 <ul><li v-for="message in Object.values(fieldErrors).flat()" :key="message">{{ message }}</li></ul>
+                <span
+                    v-for="(messages, name) in fieldErrors"
+                    v-show="name !== 'name'"
+                    :id="fieldErrorId(String(name))"
+                    :key="String(name)"
+                    class="sr-only"
+                >{{ messages.join(' ') }}</span>
             </div>
         </form>
 
-        <div v-else-if="detail" class="entity-detail">
-            <template v-if="modal.mode === 'production-requirements'">
-                <div class="detail-lead"><StatusBadge :status="detail.can_produce ? 'ready' : 'blocked'" /><strong>{{ detail.can_produce ? 'Ingredientes disponibles' : 'Producción bloqueada por faltantes' }}</strong></div>
-                <div class="responsive-detail-table">
-                    <table aria-label="Requerimientos de ingredientes">
-                        <thead><tr><th>Ingrediente</th><th>Requerido</th><th>Disponible</th><th>Faltante</th><th>Estado</th></tr></thead>
-                        <tbody><tr v-for="ingredient in detail.ingredients" :key="ingredient.snapshot_item_index">
-                            <td data-label="Ingrediente">{{ ingredient.ingredient_name }}</td>
-                            <td data-label="Requerido" class="numeric">{{ ingredient.required_quantity }} {{ unitLabel(ingredient.normalized_unit) }}</td>
-                            <td data-label="Disponible" class="numeric">{{ ingredient.available_quantity }} {{ unitLabel(ingredient.normalized_unit) }}</td>
-                            <td data-label="Faltante" class="numeric">{{ ingredient.missing_quantity }} {{ unitLabel(ingredient.normalized_unit) }}</td>
-                            <td data-label="Estado"><StatusBadge :status="ingredient.can_produce ? 'ready' : 'blocked'" /></td>
-                        </tr></tbody>
-                    </table>
-                </div>
-            </template>
-
-            <template v-else-if="modal.mode === 'production-traceability'">
-                <div class="traceability-flow">
-                    <section class="trace-step">
-                        <span class="trace-marker">1</span><div><small>Receta congelada</small><strong>{{ detail.recipe_snapshot?.product?.name }} · versión {{ detail.recipe_snapshot?.version }}</strong><p>Rendimiento esperado {{ detail.recipe_snapshot?.expected_yield }} {{ unitLabel(detail.recipe_snapshot?.yield_unit) }}</p></div>
-                    </section>
-                    <section class="trace-step">
-                        <span class="trace-marker">2</span><div><small>Lotes consumidos</small><strong>{{ detail.consumed_lots?.length ?? 0 }} lotes trazados</strong>
-                            <ul><li v-for="lot in detail.consumed_lots" :key="lot.lot_id">Lote {{ lot.lot_code }} · {{ lot.quantity }} {{ unitLabel(lot.unit) }}</li></ul>
-                        </div>
-                    </section>
-                    <section class="trace-step">
-                        <span class="trace-marker">3</span><div><small>Resultado</small><strong v-if="detail.produced_lot">Lote {{ detail.produced_lot.code }}</strong><strong v-else>Sin lote terminado</strong><p v-if="detail.produced_lot">{{ detail.produced_lot.quantity }} {{ unitLabel(detail.produced_lot.unit) }} · vence {{ formatCalendarDate(detail.produced_lot.expires_at) }}</p></div>
-                    </section>
-                </div>
-            </template>
-
-            <template v-else-if="view === 'lots' && detail.data">
-                <dl class="detail-grid">
-                    <div><dt>Lote</dt><dd>{{ detail.data.code }}</dd></div>
-                    <div><dt>Disponible</dt><dd>{{ detail.data.quantity }} {{ unitLabel(detail.data.unit) }}</dd></div>
-                    <div><dt>Reservado</dt><dd>{{ detail.data.reserved_quantity }} {{ unitLabel(detail.data.unit) }}</dd></div>
-                    <div><dt>Vencimiento</dt><dd>{{ formatCalendarDate(detail.data.expires_at) }}</dd></div>
-                </dl>
-                <h3>Movimientos recientes</h3>
-                <div class="responsive-detail-table"><table><thead><tr><th>Tipo</th><th>Cantidad</th><th>Motivo</th><th>Fecha</th></tr></thead><tbody>
-                    <tr v-for="movement in detail.movements?.data ?? []" :key="movement.id"><td data-label="Tipo">{{ statusLabel(movement.type) }}</td><td data-label="Cantidad" class="numeric">{{ movement.quantity }}</td><td data-label="Motivo">{{ movement.reason }}</td><td data-label="Fecha">{{ formatDateTime(movement.created_at) }}</td></tr>
-                </tbody></table></div>
-            </template>
-
-            <template v-else-if="view === 'orders'">
-                <dl class="detail-grid">
-                    <div><dt>Pedido</dt><dd>#{{ detail.id }}</dd></div><div><dt>Cliente</dt><dd>{{ detail.customer_name }}</dd></div>
-                    <div><dt>Estado</dt><dd><StatusBadge :status="detail.status" /></dd></div><div><dt>Total</dt><dd>{{ money(detail.total) }}</dd></div>
-                    <div><dt>Pagado</dt><dd>{{ money(detail.paid_total) }}</dd></div><div><dt>Fecha requerida</dt><dd>{{ formatDateTime(detail.required_at) }}</dd></div>
-                </dl>
-                <h3>Productos</h3>
-                <div class="responsive-detail-table"><table><thead><tr><th>Producto</th><th>Cantidad</th><th>Precio</th></tr></thead><tbody>
-                    <tr v-for="item in detail.items ?? []" :key="item.id"><td data-label="Producto">#{{ item.product_id }}</td><td data-label="Cantidad" class="numeric">{{ item.quantity }}</td><td data-label="Precio" class="numeric">{{ money(item.unit_price) }}</td></tr>
-                </tbody></table></div>
-                <h3>Historial</h3>
-                <ol class="timeline"><li v-for="transition in detail.transitions ?? []" :key="transition.id"><StatusBadge :status="transition.to_status" /><span>{{ formatDateTime(transition.created_at) }}</span></li></ol>
-            </template>
-
-            <template v-else-if="view === 'recipes'">
-                <dl class="detail-grid">
-                    <div><dt>Producto</dt><dd>{{ detail.product?.name }}</dd></div><div><dt>Versión</dt><dd>{{ detail.version }}</dd></div>
-                    <div><dt>Rendimiento</dt><dd>{{ detail.yield_quantity }} {{ unitLabel(detail.yield_unit) }}</dd></div><div><dt>Estado</dt><dd><StatusBadge :status="detail.status" /></dd></div>
-                </dl>
-                <h3>Ingredientes</h3>
-                <div class="responsive-detail-table"><table><thead><tr><th>Ingrediente</th><th>Cantidad</th><th>Unidad</th></tr></thead><tbody>
-                    <tr v-for="item in detail.items ?? []" :key="item.id"><td data-label="Ingrediente">{{ item.ingredient?.name }}</td><td data-label="Cantidad" class="numeric">{{ item.quantity }}</td><td data-label="Unidad">{{ unitLabel(item.unit) }}</td></tr>
-                </tbody></table></div>
-            </template>
-
-            <template v-else>
-                <dl class="detail-grid">
-                    <div v-for="(value, key) in detail" :key="key" v-show="!['organization_id', 'branch_id', 'updated_at'].includes(String(key)) && typeof value !== 'object'">
-                        <dt>{{ String(key).replaceAll('_', ' ') }}</dt>
-                        <dd>{{ key.toString().includes('at') ? formatDateTime(value) : value ?? '—' }}</dd>
-                    </div>
-                </dl>
-            </template>
-        </div>
+        <OperationalDetail v-else-if="detail" :detail="detail" :view="view" :mode="modal.mode" />
 
         <template v-if="isFormModal" #footer="{ close }">
             <button class="secondary" type="button" :disabled="busy" @click="close">Cancelar</button>
-            <button class="primary" type="button" :disabled="busy || !online" @click="submitForm">{{ busy ? 'Guardando…' : modal.mode === 'edit' ? 'Guardar cambios' : 'Continuar' }}</button>
+            <button class="primary" type="submit" :form="formId" :disabled="busy || !online">{{ busy ? 'Guardando…' : modal.mode === 'edit' ? 'Guardar cambios' : 'Continuar' }}</button>
         </template>
         <template v-else #footer="{ close }">
             <button class="primary" type="button" @click="close">Cerrar</button>
