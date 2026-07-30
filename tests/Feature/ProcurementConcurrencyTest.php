@@ -12,11 +12,23 @@ use Throwable;
 
 class ProcurementConcurrencyTest extends TestCase
 {
+    private bool $mustResetDatabase = false;
+
+    protected function tearDown(): void
+    {
+        if ($this->mustResetDatabase) {
+            Artisan::call('migrate:fresh', ['--force' => true]);
+        }
+
+        parent::tearDown();
+    }
+
     public function test_postgresql_serializes_competing_receipts_for_the_same_pending_quantity(): void
     {
         if (DB::getDriverName() !== 'pgsql' || ! function_exists('pcntl_fork')) {
             $this->markTestSkipped('Requires PostgreSQL and pcntl to exercise a real row-lock race.');
         }
+        $this->mustResetDatabase = true;
         Artisan::call('migrate:fresh', ['--force' => true]);
         [$order, $orderItem, $location, $user] = $this->scenario();
         $directory = storage_path('framework/cache/procurement-race-'.str()->uuid());
