@@ -9,8 +9,12 @@ use App\Infrastructure\Integrations\Arca\ArcaSandboxAdapter;
 use App\Infrastructure\Integrations\MercadoPago\MercadoPagoFakeAdapter;
 use App\Infrastructure\Integrations\MercadoPago\MercadoPagoSandboxAdapter;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -34,6 +38,20 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        RateLimiter::for('auth.login', function (Request $request): Limit {
+            $email = Str::lower(trim((string) $request->input('email')));
+
+            return Limit::perMinute(5)->by("login|{$email}|{$request->ip()}");
+        });
+        RateLimiter::for(
+            'auth.forgot-password',
+            fn (Request $request): Limit => Limit::perMinute(5)->by("forgot-password|{$request->ip()}"),
+        );
+        RateLimiter::for(
+            'auth.reset-password',
+            fn (Request $request): Limit => Limit::perMinute(10)->by("reset-password|{$request->ip()}"),
+        );
+
         ResetPassword::toMailUsing(function (object $notifiable, string $token): MailMessage {
             $url = route('password.reset', [
                 'token' => $token,
