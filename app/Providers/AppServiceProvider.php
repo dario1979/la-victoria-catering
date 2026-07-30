@@ -9,6 +9,7 @@ use App\Infrastructure\Integrations\Arca\ArcaSandboxAdapter;
 use App\Infrastructure\Integrations\MercadoPago\MercadoPagoFakeAdapter;
 use App\Infrastructure\Integrations\MercadoPago\MercadoPagoSandboxAdapter;
 use App\Support\CorrelationId;
+use App\Support\OperationalFailureRecorder;
 use App\Support\OperationalHealth;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -42,8 +43,10 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(OperationalHealth $health): void
-    {
+    public function boot(
+        OperationalHealth $health,
+        OperationalFailureRecorder $failures,
+    ): void {
         Queue::before(function () use ($health): void {
             if (Context::missing('request_id')) {
                 Context::add('request_id', CorrelationId::resolve(null));
@@ -51,7 +54,10 @@ class AppServiceProvider extends ServiceProvider
             $health->recordWorkerHeartbeat();
         });
         Queue::after(fn (JobProcessed $event) => $health->recordJobSuccess($event->job->resolveName()));
-        Queue::failing(fn (JobFailed $event) => $health->recordJobFailure($event->job->resolveName()));
+        Queue::failing(function (JobFailed $event) use ($health, $failures): void {
+            $health->recordJobFailure($event->job->resolveName());
+            $failures->record($event);
+        });
 
         RateLimiter::for('auth.login', function (Request $request): Limit {
             $email = Str::lower(trim((string) $request->input('email')));

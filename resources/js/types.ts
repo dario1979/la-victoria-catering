@@ -10,6 +10,7 @@ export type View =
     | 'payments'
     | 'procurement'
     | 'finance'
+    | 'review'
     | 'notifications'
     | 'alerts';
 

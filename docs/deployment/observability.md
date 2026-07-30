@@ -87,6 +87,9 @@ presenta como backup vencido ni como evidencia de protección activa.
 Los umbrales son iniciales para staging, no SLO contractuales. Deben ajustarse
 con evidencia del ensayo y del piloto.
 
+La operación detallada está en
+[Revisión manual y recuperación de colas](manual-review.md).
+
 ## Consultas seguras
 
 Ejemplo:

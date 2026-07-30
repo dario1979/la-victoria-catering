@@ -143,6 +143,129 @@ paths:
         '400': { description: Faltan headers de tenant }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { description: Rol sin acceso al diagnóstico }
+  /operations/failures:
+    get:
+      operationId: operationalFailures
+      summary: Lista metadatos sanitizados de jobs fallidos del tenant activo
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Direction'
+        - $ref: '#/components/parameters/Filters'
+        - $ref: '#/components/parameters/Export'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { description: Rol sin acceso a revisión manual }
+  /operations/failures/{operationalFailure}/resolution:
+    post:
+      operationId: resolveOperationalFailure
+      summary: Registra la resolución humana sin reintentar el payload original
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: operationalFailure
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resolution]
+              properties:
+                resolution: { type: string, minLength: 3, maxLength: 1000 }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: El fallo ya fue resuelto }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /operations/notification-deliveries:
+    get:
+      operationId: operationalNotificationDeliveries
+      summary: Lista entregas de notificación del tenant activo
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Direction'
+        - $ref: '#/components/parameters/Filters'
+        - $ref: '#/components/parameters/Export'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { description: Rol sin acceso a revisión manual }
+  /operations/notification-deliveries/{notificationDelivery}/retry:
+    post:
+      operationId: retryOperationalNotification
+      summary: Reintenta una entrega fallida sólo si el evento y el destinatario siguen vigentes
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: notificationDelivery
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: 'La entrega no es fallida, dejó de ser accionable o su canal está apagado' }
+  /operations/webhooks:
+    get:
+      operationId: operationalWebhooks
+      summary: Lista metadatos de webhooks sin firmas, headers ni payloads
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Direction'
+        - $ref: '#/components/parameters/Filters'
+        - $ref: '#/components/parameters/Export'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { description: Rol sin acceso a revisión manual }
+  /operations/webhooks/{externalWebhook}/resolution:
+    post:
+      operationId: resolveOperationalWebhook
+      summary: Marca revisión o resolución sin modificar la evidencia recibida
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: externalWebhook
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status, resolution]
+              properties:
+                status: { type: string, enum: [manual_review, resolved] }
+                resolution: { type: string, minLength: 3, maxLength: 1000 }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: El webhook no admite revisión en su estado actual }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /customers:
     get:
       summary: Lista y busca clientes

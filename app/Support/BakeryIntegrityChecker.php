@@ -264,6 +264,44 @@ final class BakeryIntegrityChecker
                             ->orWhereRaw('COALESCE(delivery.branch_id, -1) <> COALESCE(alert.branch_id, -1)')))),
             'delivery.organization_id', 'delivery.branch_id', $organizationId, $branchId
         ));
+        $this->query('operations.review_tenant_alignment', 'Fallos operativos y webhooks revisados respetan tenant y actor.', $this->scope(
+            DB::table('operational_failures as failure')
+                ->leftJoin('branches as branch', 'branch.id', '=', 'failure.branch_id')
+                ->leftJoin('organization_user as resolver', function ($join): void {
+                    $join->on('resolver.user_id', '=', 'failure.resolved_by')
+                        ->on('resolver.organization_id', '=', 'failure.organization_id');
+                })
+                ->selectRaw('failure.id AS violation_id')
+                ->where(fn (Builder $query) => $query
+                    ->where(fn (Builder $branchMismatch) => $branchMismatch
+                        ->whereNotNull('failure.branch_id')
+                        ->where(fn (Builder $mismatch) => $mismatch
+                            ->whereNull('failure.organization_id')
+                            ->orWhereColumn('branch.organization_id', '!=', 'failure.organization_id')))
+                    ->orWhere(fn (Builder $resolverMismatch) => $resolverMismatch
+                        ->whereNotNull('failure.resolved_by')
+                        ->whereNull('resolver.user_id'))),
+            'failure.organization_id', 'failure.branch_id', $organizationId, $branchId
+        ));
+        $this->query('operations.webhook_tenant_alignment', 'La revisión de webhooks respeta tenant y actor.', $this->scope(
+            DB::table('external_webhooks as webhook')
+                ->leftJoin('branches as branch', 'branch.id', '=', 'webhook.branch_id')
+                ->leftJoin('organization_user as reviewer', function ($join): void {
+                    $join->on('reviewer.user_id', '=', 'webhook.reviewed_by')
+                        ->on('reviewer.organization_id', '=', 'webhook.organization_id');
+                })
+                ->selectRaw('webhook.id AS violation_id')
+                ->where(fn (Builder $query) => $query
+                    ->where(fn (Builder $branchMismatch) => $branchMismatch
+                        ->whereNotNull('webhook.branch_id')
+                        ->where(fn (Builder $mismatch) => $mismatch
+                            ->whereNull('webhook.organization_id')
+                            ->orWhereColumn('branch.organization_id', '!=', 'webhook.organization_id')))
+                    ->orWhere(fn (Builder $reviewerMismatch) => $reviewerMismatch
+                        ->whereNotNull('webhook.reviewed_by')
+                        ->whereNull('reviewer.user_id'))),
+            'webhook.organization_id', 'webhook.branch_id', $organizationId, $branchId
+        ));
         $this->query('idempotency.payloads', 'Las claves idempotentes tienen hash y respuesta válidos.', DB::table('idempotency_keys')
             ->selectRaw('id AS violation_id')
             ->where(fn (Builder $query) => $query

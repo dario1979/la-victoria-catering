@@ -366,6 +366,12 @@ test('operational pilot journey crosses sales, stock, procurement, production an
         intervals: [2_000, 5_000, 10_000],
     }).toBeGreaterThan(0);
 
+    await page.getByRole('button', { name: 'Revisión', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Jobs que requieren decisión' })).toBeVisible();
+    await page.getByRole('button', { name: 'Entregas', exact: true }).click();
+    await expect(page.getByRole('table', { name: 'Entregas del tenant' })).toBeVisible();
+    await expect(page.getByRole('table', { name: 'Entregas del tenant' })).toContainText('Centro interno');
+
     await page.getByRole('button', { name: 'Pedidos', exact: true }).click();
     await page.getByLabel('Buscar').fill('Cliente Piloto E2E');
     await expect(page.getByRole('table', { name: 'Pedidos' })).toContainText('Cliente Piloto E2E');

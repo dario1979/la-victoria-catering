@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\DeliveryController;
 use App\Http\Controllers\Api\V1\IntegrationController;
 use App\Http\Controllers\Api\V1\LocationController;
 use App\Http\Controllers\Api\V1\LotController;
+use App\Http\Controllers\Api\V1\ManualReviewController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\OperationalStatusController;
 use App\Http\Controllers\Api\V1\OrderController;
@@ -39,6 +40,12 @@ Route::middleware('web')->prefix('v1')->group(function (): void {
 
         Route::middleware('tenant')->group(function (): void {
             Route::get('/operations/status', [OperationalStatusController::class, 'show']);
+            Route::get('/operations/failures', [ManualReviewController::class, 'failures']);
+            Route::post('/operations/failures/{operationalFailure}/resolution', [ManualReviewController::class, 'resolveFailure']);
+            Route::get('/operations/notification-deliveries', [ManualReviewController::class, 'notifications']);
+            Route::post('/operations/notification-deliveries/{notificationDelivery}/retry', [ManualReviewController::class, 'retryNotification']);
+            Route::get('/operations/webhooks', [ManualReviewController::class, 'webhooks']);
+            Route::post('/operations/webhooks/{externalWebhook}/resolution', [ManualReviewController::class, 'resolveWebhook']);
             Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
             Route::apiResource('customers', CustomerController::class)->only(['index', 'store', 'show', 'update']);
             Route::apiResource('products', ProductController::class)->only(['index', 'store', 'show', 'update']);

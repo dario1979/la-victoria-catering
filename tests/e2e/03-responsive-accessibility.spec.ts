@@ -20,7 +20,7 @@ async function openMore(page: import('@playwright/test').Page) {
 }
 
 test('@viewport dashboard, modal and table actions stay usable and accessible', async ({ context, page }) => {
-    const session = await login(page, 'compras@lavictoria.test');
+    const session = await login(page, 'admin@lavictoria.test');
     await expect(page.getByLabel('Sucursal')).toHaveValue(String(session.branchId));
     await expectNoHorizontalOverflow(page);
 
@@ -114,4 +114,25 @@ test('@viewport dashboard, modal and table actions stay usable and accessible', 
     await page.keyboard.press('Escape');
     await expect(menu).toBeHidden();
     await expect(actionTrigger).toBeFocused();
+
+    if (mobileNavigation) {
+        await openMore(page);
+        await page.getByRole('dialog').getByRole('button', { name: 'Revisión', exact: true }).click();
+    } else {
+        await page.getByRole('button', { name: 'Revisión', exact: true }).click();
+    }
+
+    await expect(page.getByRole('heading', { level: 1, name: 'Revisión' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Jobs que requieren decisión' })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+
+    await page.getByRole('button', { name: 'Webhooks', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 2, name: 'Webhooks recibidos' })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+
+    const accessibility = await new AxeBuilder({ page })
+        .include('main')
+        .withTags(['wcag2a', 'wcag2aa'])
+        .analyze();
+    expect(accessibility.violations).toEqual([]);
 });
