@@ -45,6 +45,22 @@ function Invoke-StagingPreflight {
     }
 }
 
+function Wait-StagingReadiness {
+    for ($attempt = 1; $attempt -le 18; $attempt++) {
+        & docker compose @composeArgs exec -T backend `
+            curl --fail --silent --show-error http://127.0.0.1:8000/health/ready 2>$null | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Output 'staging.readiness PASS'
+
+            return
+        }
+
+        Start-Sleep -Seconds 5
+    }
+
+    throw 'Staging readiness did not pass within 90 seconds; frontend remains unexposed.'
+}
+
 function Start-StagingRelease {
     param([switch] $SkipBuild)
 
@@ -57,6 +73,7 @@ function Start-StagingRelease {
     Invoke-StagingPreflight -Mode pre-migrate
     Invoke-StagingCompose up -d backend queue scheduler --wait --wait-timeout 180
     Invoke-StagingPreflight -Mode runtime
+    Wait-StagingReadiness
     Invoke-StagingCompose up -d frontend --wait --wait-timeout 120 --remove-orphans
     Set-Content -LiteralPath '.staging-release' -Value $env:STAGING_IMAGE_TAG
     Invoke-StagingCompose ps

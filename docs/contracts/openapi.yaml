@@ -121,6 +121,28 @@ paths:
                   data: { $ref: '#/components/schemas/DashboardSummary' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /operations/status:
+    get:
+      operationId: operationsStatus
+      summary: Diagnóstico operativo protegido y limitado al tenant activo
+      description: Requiere rol owner o admin. Las señales de plataforma son agregadas y nunca incluyen payloads.
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Readiness y señales operativas seguras
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/OperationalStatus' }
+        '400': { description: Faltan headers de tenant }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { description: Rol sin acceso al diagnóstico }
   /customers:
     get:
       summary: Lista y busca clientes
@@ -1108,6 +1130,12 @@ components:
       in: header
       required: true
       schema: { type: integer }
+    RequestId:
+      name: X-Request-ID
+      in: header
+      required: false
+      description: Identificador acotado de correlación; el servidor genera uno si es inválido o falta.
+      schema: { type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$' }
     IdempotencyKey:
       name: Idempotency-Key
       in: header
@@ -1308,6 +1336,55 @@ components:
           type: array
           maxItems: 5
           items: { $ref: '#/components/schemas/DashboardAlert' }
+    OperationalStatus:
+      type: object
+      required: [status, system, platform_signals, tenant_signals, request_id]
+      properties:
+        status: { type: string, enum: [ready, unavailable] }
+        request_id: { type: string }
+        system:
+          type: array
+          items:
+            type: object
+            required: [id, status]
+            properties:
+              id: { type: string, enum: [postgresql, redis, storage, migrations, worker_heartbeat, scheduler_heartbeat] }
+              status: { type: string, enum: [pass, fail] }
+        platform_signals:
+          type: object
+          required: [scope, last_job_success, last_job_failure, failed_jobs, backup]
+          properties:
+            scope: { type: string, const: platform }
+            last_job_success: { $ref: '#/components/schemas/JobSignal' }
+            last_job_failure: { $ref: '#/components/schemas/JobSignal' }
+            failed_jobs: { type: [integer, 'null'], minimum: 0 }
+            backup:
+              type: object
+              required: [status, last_manifest_at]
+              properties:
+                status: { type: string, enum: [not_configured, missing, fresh, overdue, unavailable] }
+                last_manifest_at: { type: [string, 'null'], format: date-time }
+        tenant_signals:
+          type: object
+          required: [scope, old_pending_notifications, failed_notifications, external_transactions_attention, fiscal_documents_pending]
+          properties:
+            scope:
+              type: object
+              required: [organization_id, branch_id]
+              properties:
+                organization_id: { type: integer }
+                branch_id: { type: integer }
+            old_pending_notifications: { type: [integer, 'null'], minimum: 0 }
+            failed_notifications: { type: [integer, 'null'], minimum: 0 }
+            external_transactions_attention: { type: [integer, 'null'], minimum: 0 }
+            fiscal_documents_pending: { type: [integer, 'null'], minimum: 0 }
+    JobSignal:
+      type: object
+      required: [status, at, job]
+      properties:
+        status: { type: string, enum: [recorded, missing, unavailable] }
+        at: { type: [string, 'null'], format: date-time }
+        job: { type: [string, 'null'] }
     DashboardMetrics:
       type: object
       required: [orders_total, orders_today, overdue_orders, pending_production, outstanding_balance, open_alerts, critical_stock]

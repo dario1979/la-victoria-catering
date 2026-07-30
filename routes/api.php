@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\IntegrationController;
 use App\Http\Controllers\Api\V1\LocationController;
 use App\Http\Controllers\Api\V1\LotController;
 use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\OperationalStatusController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\ProductController;
@@ -37,6 +38,7 @@ Route::middleware('web')->prefix('v1')->group(function (): void {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
 
         Route::middleware('tenant')->group(function (): void {
+            Route::get('/operations/status', [OperationalStatusController::class, 'show']);
             Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
             Route::apiResource('customers', CustomerController::class)->only(['index', 'store', 'show', 'update']);
             Route::apiResource('products', ProductController::class)->only(['index', 'store', 'show', 'update']);

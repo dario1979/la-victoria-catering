@@ -34,6 +34,8 @@ function Assert-HttpOk {
 }
 
 Assert-HttpOk -Name 'frontend health' -Uri "$base/healthz" | Out-Null
+Assert-HttpOk -Name 'application liveness' -Uri "$base/health/live" | Out-Null
+Assert-HttpOk -Name 'application readiness' -Uri "$base/health/ready" | Out-Null
 Assert-HttpOk -Name 'application shell' -Uri "$base/" | Out-Null
 Assert-HttpOk -Name 'manifest' -Uri "$base/build/manifest.webmanifest" | Out-Null
 Assert-HttpOk -Name 'service worker' -Uri "$base/build/sw.js" | Out-Null

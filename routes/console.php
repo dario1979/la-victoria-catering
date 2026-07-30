@@ -6,7 +6,9 @@ use App\Jobs\DetectOrderDelays;
 use App\Jobs\DetectPurchaseRisks;
 use App\Jobs\ProcessPendingFiscalDocuments;
 use App\Jobs\QueueAlertNotifications;
+use App\Jobs\RecordWorkerHeartbeat;
 use App\Jobs\SynchronizePendingPaymentGatewayTransactions;
+use App\Support\OperationalHealth;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -22,3 +24,10 @@ Schedule::job(new QueueAlertNotifications)->everyMinute()->withoutOverlapping();
 Schedule::job(new DeliverPendingNotifications)->everyMinute()->withoutOverlapping();
 Schedule::job(new SynchronizePendingPaymentGatewayTransactions)->everyFiveMinutes()->withoutOverlapping();
 Schedule::job(new ProcessPendingFiscalDocuments)->everyFiveMinutes()->withoutOverlapping();
+Schedule::call(fn () => app(OperationalHealth::class)->recordSchedulerHeartbeat())
+    ->name('operations:scheduler-heartbeat')
+    ->everyMinute();
+Schedule::job(new RecordWorkerHeartbeat)
+    ->name('operations:worker-heartbeat')
+    ->everyMinute()
+    ->withoutOverlapping();

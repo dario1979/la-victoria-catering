@@ -7,6 +7,7 @@ use App\Models\Organization;
 use App\Support\TenantContext;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Context;
 use Symfony\Component\HttpFoundation\Response;
 
 final class ResolveTenant
@@ -31,6 +32,11 @@ final class ResolveTenant
         abort_unless($branch instanceof Branch, 403, 'You do not have access to this branch.');
 
         app()->instance(TenantContext::class, new TenantContext($membership, $branch, $membership->pivot->role));
+        Context::add([
+            'organization_id' => $membership->id,
+            'branch_id' => $branch->id,
+            'actor_id' => $request->user()->id,
+        ]);
         $request->attributes->set('organization', $membership);
         $request->attributes->set('branch', $branch);
 

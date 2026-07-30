@@ -138,6 +138,7 @@ Backup, restauración y ensayo verificable:
 
 - [Backup y restauración](backup-restore.md)
 - [Verificación de integridad](integrity.md)
+- [Observabilidad operacional](observability.md)
 
 Estado:
 

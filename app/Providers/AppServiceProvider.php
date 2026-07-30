@@ -8,10 +8,16 @@ use App\Infrastructure\Integrations\Arca\ArcaFakeAdapter;
 use App\Infrastructure\Integrations\Arca\ArcaSandboxAdapter;
 use App\Infrastructure\Integrations\MercadoPago\MercadoPagoFakeAdapter;
 use App\Infrastructure\Integrations\MercadoPago\MercadoPagoSandboxAdapter;
+use App\Support\CorrelationId;
+use App\Support\OperationalHealth;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Queue\Events\JobProcessed;
+use Illuminate\Support\Facades\Context;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -36,8 +42,17 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(): void
+    public function boot(OperationalHealth $health): void
     {
+        Queue::before(function () use ($health): void {
+            if (Context::missing('request_id')) {
+                Context::add('request_id', CorrelationId::resolve(null));
+            }
+            $health->recordWorkerHeartbeat();
+        });
+        Queue::after(fn (JobProcessed $event) => $health->recordJobSuccess($event->job->resolveName()));
+        Queue::failing(fn (JobFailed $event) => $health->recordJobFailure($event->job->resolveName()));
+
         RateLimiter::for('auth.login', function (Request $request): Limit {
             $email = Str::lower(trim((string) $request->input('email')));
 
