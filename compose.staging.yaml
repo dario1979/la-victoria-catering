@@ -1,0 +1,178 @@
+name: la-victoria-bakery-staging
+
+x-backend: &backend
+  image: "la-victoria-bakery-backend:${STAGING_IMAGE_TAG:-staging-local}"
+  env_file:
+    - path: "${STAGING_ENV_FILE:-.env.staging}"
+      required: true
+  environment: &backend-environment
+    APP_NAME: "${APP_NAME:-La Victoria Bakery}"
+    APP_ENV: staging
+    APP_KEY: "${APP_KEY:?APP_KEY is required for staging}"
+    APP_DEBUG: "false"
+    APP_URL: "${APP_URL:?APP_URL is required for staging}"
+    APP_LOCALE: "${APP_LOCALE:-es}"
+    APP_FALLBACK_LOCALE: "${APP_FALLBACK_LOCALE:-es}"
+    LOG_CHANNEL: "${LOG_CHANNEL:-stack}"
+    LOG_STACK: "${LOG_STACK:-single}"
+    LOG_LEVEL: "${LOG_LEVEL:-info}"
+    DB_CONNECTION: pgsql
+    DB_HOST: postgres
+    DB_PORT: "5432"
+    DB_DATABASE: "${DB_DATABASE:?DB_DATABASE is required for staging}"
+    DB_USERNAME: "${DB_USERNAME:?DB_USERNAME is required for staging}"
+    DB_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD is required for staging}"
+    DB_SSLMODE: "${DB_SSLMODE:-disable}"
+    SESSION_DRIVER: database
+    SESSION_LIFETIME: "${SESSION_LIFETIME:-120}"
+    SESSION_ENCRYPT: "${SESSION_ENCRYPT:-true}"
+    SESSION_SECURE_COOKIE: "${SESSION_SECURE_COOKIE:-true}"
+    SESSION_SAME_SITE: "${SESSION_SAME_SITE:-lax}"
+    SESSION_DOMAIN: "${SESSION_DOMAIN:?SESSION_DOMAIN is required for staging}"
+    CACHE_STORE: redis
+    QUEUE_CONNECTION: redis
+    REDIS_HOST: redis
+    REDIS_PASSWORD: "${REDIS_PASSWORD:?REDIS_PASSWORD is required for staging}"
+    REDIS_PORT: "6379"
+    MAIL_MAILER: "${MAIL_MAILER:-smtp}"
+    MAIL_HOST: mailpit
+    MAIL_PORT: "1025"
+    MAIL_FROM_ADDRESS: "${MAIL_FROM_ADDRESS:?MAIL_FROM_ADDRESS is required for staging}"
+    MAIL_FROM_NAME: "${MAIL_FROM_NAME:-La Victoria Bakery Staging}"
+    FILESYSTEM_DISK: "${FILESYSTEM_DISK:-local}"
+    DEMO_USER_PASSWORD: "${DEMO_USER_PASSWORD:?DEMO_USER_PASSWORD is required for staging}"
+    ARCA_DRIVER: "${ARCA_DRIVER:-fake}"
+    ARCA_ENDPOINT: "${ARCA_ENDPOINT:-}"
+    ARCA_CERTIFICATE_PATH: "${ARCA_CERTIFICATE_PATH:-}"
+    MERCADOPAGO_DRIVER: "${MERCADOPAGO_DRIVER:-fake}"
+    MERCADOPAGO_ENDPOINT: "${MERCADOPAGO_ENDPOINT:-}"
+    MERCADOPAGO_ACCESS_TOKEN: "${MERCADOPAGO_ACCESS_TOKEN:-}"
+    MERCADOPAGO_WEBHOOK_SECRET: "${MERCADOPAGO_WEBHOOK_SECRET:-}"
+  restart: unless-stopped
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  networks:
+    - staging_internal
+  volumes:
+    - staging_app_storage:/var/www/html/storage
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: "${DB_DATABASE:?DB_DATABASE is required for staging}"
+      POSTGRES_USER: "${DB_USERNAME:?DB_USERNAME is required for staging}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD is required for staging}"
+    networks:
+      - staging_internal
+    volumes:
+      - staging_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - "${REDIS_PASSWORD:?REDIS_PASSWORD is required for staging}"
+    networks:
+      - staging_internal
+    volumes:
+      - staging_redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    environment:
+      REDIS_PASSWORD: "${REDIS_PASSWORD:?REDIS_PASSWORD is required for staging}"
+
+  backend:
+    <<: *backend
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    environment:
+      <<: *backend-environment
+      RUN_MIGRATIONS: "true"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8000/up"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 6
+
+  queue:
+    <<: *backend
+    command: ["php", "artisan", "queue:work", "redis", "--sleep=1", "--tries=3", "--timeout=90", "--max-time=3600"]
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD-SHELL", "php artisan queue:monitor redis:default --max=1000 >/dev/null 2>&1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+
+  scheduler:
+    <<: *backend
+    command: ["php", "artisan", "schedule:work"]
+    healthcheck:
+      test: ["CMD-SHELL", "php artisan schedule:list >/dev/null 2>&1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+
+  frontend:
+    image: "la-victoria-bakery-frontend:${STAGING_IMAGE_TAG:-staging-local}"
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - staging_internal
+    ports:
+      - "${STAGING_HTTP_BIND:-127.0.0.1}:${STAGING_HTTP_PORT:-8081}:80"
+    volumes:
+      - ./docker/staging/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mailpit:
+    image: axllent/mailpit:v1.21
+    restart: unless-stopped
+    networks:
+      - staging_internal
+    ports:
+      - "${STAGING_MAILPIT_BIND:-127.0.0.1}:${STAGING_MAILPIT_PORT:-8026}:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+networks:
+  staging_internal:
+    driver: bridge
+
+volumes:
+  staging_postgres_data:
+  staging_redis_data:
+  staging_app_storage:

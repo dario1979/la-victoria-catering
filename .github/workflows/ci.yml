@@ -89,4 +89,17 @@ jobs:
       - run: docker compose config --quiet
         env:
           APP_KEY: base64:MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=
+      - run: docker compose --env-file .env.staging.example -f compose.staging.yaml config --quiet
+        env:
+          APP_KEY: base64:MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=
+          APP_URL: https://staging.example.invalid
+          DB_DATABASE: la_victoria_staging_ci
+          DB_USERNAME: la_victoria_staging_ci
+          DB_PASSWORD: staging-ci-database-only
+          REDIS_PASSWORD: staging-ci-redis-only
+          SESSION_DOMAIN: staging.example.invalid
+          MAIL_FROM_ADDRESS: no-reply@staging.example.invalid
+          DEMO_USER_PASSWORD: staging-ci-demo-only
+          STAGING_ENV_FILE: .env.staging.example
+          STAGING_IMAGE_TAG: ci
       - run: docker compose build
