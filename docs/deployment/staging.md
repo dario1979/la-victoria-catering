@@ -95,6 +95,11 @@ Para automatización, también acepta `STAGING_SMOKE_EMAIL` y
 
 ## Operación
 
+Backup, restauración y ensayo verificable:
+
+- [Backup y restauración](backup-restore.md)
+- [Verificación de integridad](integrity.md)
+
 Estado:
 
 ```powershell

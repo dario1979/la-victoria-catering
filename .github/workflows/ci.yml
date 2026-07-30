@@ -217,3 +217,26 @@ jobs:
       - name: Destroy isolated E2E stack
         if: always()
         run: bash scripts/e2e-stack.sh down
+
+  backup-restore:
+    name: Backup · PostgreSQL restore drill
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: bcmath, pdo_sqlite, pdo_pgsql, zip
+          coverage: none
+      - run: composer install --no-interaction --no-progress --prefer-dist
+      - name: Run isolated backup and restore drill
+        run: bash scripts/staging-restore-test.sh
+      - name: Upload restore evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-restore-evidence
+          path: storage/app/restore-tests
+          if-no-files-found: error
+          retention-days: 14
