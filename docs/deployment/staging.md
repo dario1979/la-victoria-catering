@@ -58,7 +58,16 @@ HTTPS. Para una prueba sólo local por HTTP debe usarse un archivo temporal con
 
 ## Despliegue
 
-Validar sin iniciar servicios:
+La validación se ejecuta en dos niveles. Si todavía no existe `.env.staging`,
+el chequeo estructural usa valores descartables únicamente para resolver
+Compose, no construye imágenes, no inicia servicios y devuelve código `2` con
+el runtime bloqueado:
+
+```powershell
+.\scripts\staging-preflight.ps1 -Mode structural
+```
+
+Cuando existe el archivo, la misma orden valida Compose sin mostrar valores:
 
 ```powershell
 .\scripts\staging-deploy.ps1 -Action config
@@ -70,8 +79,38 @@ Construir y desplegar una imagen etiquetada con el SHA actual:
 .\scripts\staging-deploy.ps1 -Action up
 ```
 
-El entrypoint ejecuta migraciones con `--force`. No ejecuta seeders. Los datos
-demo son opt-in:
+La secuencia es fail-closed:
+
+1. valida la estructura de Compose;
+2. construye las imágenes;
+3. inicia sólo PostgreSQL, Redis y Mailpit;
+4. ejecuta `bakery:staging-preflight` antes de migrar, permitiendo pendientes
+   únicamente en esa compuerta;
+5. inicia backend, worker y scheduler; el entrypoint aplica migraciones;
+6. exige preflight runtime sin migraciones pendientes;
+7. recién entonces inicia y publica el frontend.
+
+El preflight verifica ambiente, debug, clave, HTTPS, cookies, dominio, PostgreSQL,
+autenticación Redis, storage, correo, cola, scheduler, migraciones, contraseña
+demo y flags de integraciones. Certificado ARCA, secretos Mercado Pago y claves
+VAPID sólo son obligatorios cuando su feature está habilitada. La salida sólo
+incluye identificadores, estados y mensajes; nunca valores configurados.
+
+Con el stack ya activo puede repetirse:
+
+```powershell
+.\scripts\staging-deploy.ps1 -Action preflight
+```
+
+En Unix están disponibles los mismos tres modos:
+
+```bash
+./scripts/staging-preflight.sh structural
+./scripts/staging-preflight.sh pre-migrate
+./scripts/staging-preflight.sh runtime
+```
+
+El entrypoint no ejecuta seeders. Los datos demo son opt-in:
 
 ```powershell
 .\scripts\staging-deploy.ps1 -Action seed-demo -AllowDemoSeed

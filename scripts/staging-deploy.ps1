@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('config', 'build', 'up', 'status', 'logs', 'seed-demo', 'rollback')]
+    [ValidateSet('config', 'preflight', 'build', 'up', 'status', 'logs', 'seed-demo', 'rollback')]
     [string] $Action = 'up',
     [string] $EnvFile = '.env.staging',
     [string] $ImageTag,
@@ -10,7 +10,8 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if (-not (Test-Path -LiteralPath $EnvFile)) {
-    throw "Missing staging environment file: $EnvFile. Copy .env.staging.example and provide secrets outside Git."
+    & "$PSScriptRoot/staging-preflight.ps1" -Mode structural -EnvFile $EnvFile
+    exit $LASTEXITCODE
 }
 
 $resolvedEnvFile = (Resolve-Path -LiteralPath $EnvFile).Path
@@ -32,19 +33,47 @@ function Invoke-StagingCompose {
     }
 }
 
+function Invoke-StagingPreflight {
+    param(
+        [ValidateSet('structural', 'pre-migrate', 'runtime')]
+        [string] $Mode
+    )
+
+    & "$PSScriptRoot/staging-preflight.ps1" -Mode $Mode -EnvFile $resolvedEnvFile
+    if ($LASTEXITCODE -ne 0) {
+        throw "Staging $Mode preflight failed with exit code $LASTEXITCODE."
+    }
+}
+
+function Start-StagingRelease {
+    param([switch] $SkipBuild)
+
+    Invoke-StagingPreflight -Mode structural
+    if (-not $SkipBuild) {
+        Invoke-StagingCompose build --pull
+    }
+
+    Invoke-StagingCompose up -d postgres redis mailpit --wait --wait-timeout 120
+    Invoke-StagingPreflight -Mode pre-migrate
+    Invoke-StagingCompose up -d backend queue scheduler --wait --wait-timeout 180
+    Invoke-StagingPreflight -Mode runtime
+    Invoke-StagingCompose up -d frontend --wait --wait-timeout 120 --remove-orphans
+    Set-Content -LiteralPath '.staging-release' -Value $env:STAGING_IMAGE_TAG
+    Invoke-StagingCompose ps
+}
+
 switch ($Action) {
     'config' {
-        Invoke-StagingCompose config --quiet
+        Invoke-StagingPreflight -Mode structural
+    }
+    'preflight' {
+        Invoke-StagingPreflight -Mode runtime
     }
     'build' {
         Invoke-StagingCompose build --pull
     }
     'up' {
-        Invoke-StagingCompose config --quiet
-        Invoke-StagingCompose build --pull
-        Invoke-StagingCompose up -d --remove-orphans
-        Set-Content -LiteralPath '.staging-release' -Value $env:STAGING_IMAGE_TAG
-        Invoke-StagingCompose ps
+        Start-StagingRelease
     }
     'status' {
         Invoke-StagingCompose ps
@@ -62,8 +91,6 @@ switch ($Action) {
         if (-not $ImageTag) {
             throw 'Rollback requires -ImageTag with a previously built immutable image tag.'
         }
-        Invoke-StagingCompose up -d --no-build --remove-orphans
-        Set-Content -LiteralPath '.staging-release' -Value $env:STAGING_IMAGE_TAG
-        Invoke-StagingCompose ps
+        Start-StagingRelease -SkipBuild
     }
 }
