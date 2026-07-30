@@ -942,6 +942,113 @@ paths:
       responses:
         '200': { $ref: '#/components/responses/Ok' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /integration/payment-transactions:
+    get:
+      summary: Lista estados internos y externos de pagos del tenant activo
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Filters'
+        - $ref: '#/components/parameters/Export'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+  /integration/payment-transactions/{paymentGatewayTransaction}/sync:
+    post:
+      summary: Reconsulta el proveedor sin usar el webhook como fuente de verdad
+      parameters:
+        - { name: paymentGatewayTransaction, in: path, required: true, schema: { type: integer } }
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /webhooks/mercadopago:
+    post:
+      security: []
+      summary: Verifica, reduce y deduplica una señal de webhook de Mercado Pago
+      responses:
+        '200': { description: Evento duplicado ya recibido }
+        '202': { description: Evento verificado y aceptado para consulta posterior }
+        '404': { description: Webhooks desactivados por feature flag }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /fiscal-documents:
+    get:
+      summary: Lista comprobantes fiscales inmutables del tenant activo
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Filters'
+        - $ref: '#/components/parameters/Export'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+    post:
+      summary: Emite con datos fiscales explícitos; nunca infiere condición, tipo o punto de venta
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '409': { description: Integración ARCA desactivada }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /fiscal-documents/{fiscalDocument}/reprocess:
+    post:
+      summary: Reprocesa en forma auditada un comprobante no autorizado
+      parameters:
+        - { name: fiscalDocument, in: path, required: true, schema: { type: integer } }
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Documento autorizado o integración desactivada }
+  /notifications:
+    get:
+      summary: Centro interno personal con trazabilidad de entrega
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Filters'
+        - $ref: '#/components/parameters/Export'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+  /notification-preferences:
+    get:
+      summary: Consulta preferencias personales de canal y horas silenciosas
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+    put:
+      summary: Reemplaza preferencias personales para los tres canales definidos
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /push-subscriptions:
+    post:
+      summary: Registra cifrada una suscripción cuando el transporte push está habilitado
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '409': { description: Push PWA desactivado }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /alerts:
     get:
       summary: Lista y filtra alertas operativas

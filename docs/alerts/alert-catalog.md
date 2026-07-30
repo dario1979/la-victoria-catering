@@ -10,5 +10,7 @@
 | `CashDifferenceDetected` | Arqueo no coincide | Alta | Finanzas | Revisar conteo y aprobar con observaciones | Diferencia aprobada |
 | `ReconciliationMismatchDetected` | Importe externo distinto del interno | Alta | Finanzas | Revisar evidencia externa | Coincidencia, resolución o descarte |
 | `IntegrationDeliveryFailed` | Reintentos agotados | Crítica | Administración | Revisar adaptador/canal alternativo | Entrega confirmada o incidente resuelto |
+| `MercadoPagoManualReview` | Sincronización de pago agotó reintentos | Alta | Finanzas | Consultar proveedor, conciliar y reprocesar | Estado confirmado o conciliación resuelta |
+| `FiscalDocumentManualReview` | Emisión fiscal agotó reintentos | Crítica | Finanzas | Verificar ARCA antes de corrección no destructiva | Autorización o documento compensatorio validado |
 
 Cada regla define canal, horario, deduplicación, cooldown, escalamiento y evidencia de resolución. Las alertas no accionables se eliminan.

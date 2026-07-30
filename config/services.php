@@ -2,15 +2,23 @@
 
 return [
     'arca' => [
+        'enabled' => (bool) env('ARCA_ENABLED', false),
         'driver' => env('ARCA_DRIVER', 'fake'),
         'endpoint' => env('ARCA_ENDPOINT'),
         'certificate_path' => env('ARCA_CERTIFICATE_PATH'),
     ],
     'mercadopago' => [
+        'enabled' => (bool) env('MERCADOPAGO_ENABLED', false),
+        'webhooks_enabled' => (bool) env('MERCADOPAGO_WEBHOOKS_ENABLED', false),
         'driver' => env('MERCADOPAGO_DRIVER', 'fake'),
         'endpoint' => env('MERCADOPAGO_ENDPOINT'),
         'access_token' => env('MERCADOPAGO_ACCESS_TOKEN'),
         'webhook_secret' => env('MERCADOPAGO_WEBHOOK_SECRET'),
+    ],
+    'pwa_push' => [
+        'enabled' => (bool) env('PWA_PUSH_ENABLED', false),
+        'public_key' => env('PWA_PUSH_PUBLIC_KEY'),
+        'private_key' => env('PWA_PUSH_PRIVATE_KEY'),
     ],
 
     /*

@@ -51,6 +51,10 @@ class AppServiceProvider extends ServiceProvider
             'auth.reset-password',
             fn (Request $request): Limit => Limit::perMinute(10)->by("reset-password|{$request->ip()}"),
         );
+        RateLimiter::for(
+            'integration.webhooks',
+            fn (Request $request): Limit => Limit::perMinute(120)->by("integration-webhook|{$request->ip()}"),
+        );
 
         ResetPassword::toMailUsing(function (object $notifiable, string $token): MailMessage {
             $url = route('password.reset', [

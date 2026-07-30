@@ -46,6 +46,10 @@ El service worker controla `/`, pero no cachea respuestas de `/api/v1`.
 - [Mapa de módulos](docs/domain/module-map.md)
 - [Operación de compras](docs/modules/procurement.md)
 - [Caja, cuentas operativas y conciliación](docs/modules/finance-operations.md)
+- [Centro de notificaciones](docs/modules/notifications.md)
+- [Runbook de Mercado Pago](docs/integrations/mercadopago-runbook.md)
+- [Runbook de homologación ARCA](docs/integrations/arca-homologation-runbook.md)
+- [Plan de piloto operativo](docs/deployment/pilot.md)
 - [Contrato HTTP](docs/contracts/openapi.yaml)
 - [Decisiones](docs/decisions/)
 

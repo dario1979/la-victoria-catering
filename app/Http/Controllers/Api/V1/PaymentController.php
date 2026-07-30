@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Domain\Finance\CashManager;
 use App\Domain\Finance\CustomerLedger;
 use App\Domain\Finance\FinanceAccess;
+use App\Domain\Integrations\PaymentIntegrationManager;
 use App\Http\Controllers\Controller;
 use App\Models\CashMovement;
 use App\Models\CashSession;
@@ -66,6 +67,7 @@ final class PaymentController extends Controller
         FinanceAccess $access,
         CashManager $cash,
         CustomerLedger $ledger,
+        PaymentIntegrationManager $paymentIntegration,
     ): JsonResponse {
         $tenant = app(TenantContext::class);
         $access->authorize($tenant, 'operate-cash');
@@ -86,12 +88,15 @@ final class PaymentController extends Controller
                 ),
             ],
         ]);
+        if ($data['method'] === 'mercadopago') {
+            abort_unless(config('services.mercadopago.enabled'), 409, 'Mercado Pago integration is disabled.');
+        }
         $order = Order::query()->where('organization_id', $tenant->organization->id)
             ->where('branch_id', $tenant->branch->id)->findOrFail($data['order_id']);
         Gate::authorize('recordPayment', $order);
         abort_unless($request->hasHeader('Idempotency-Key'), 400, 'Idempotency-Key header is required.');
         $key = (string) $request->header('Idempotency-Key');
-        [$body, $status, $replayed] = $idempotency->run("organizations.{$tenant->organization->id}.payments.create", $key, $data, function () use ($data, $tenant, $request, $cash, $ledger, $key): array {
+        [$body, $status, $replayed] = $idempotency->run("organizations.{$tenant->organization->id}.payments.create", $key, $data, function () use ($data, $tenant, $request, $cash, $ledger, $paymentIntegration, $key): array {
             $order = Order::query()->where('organization_id', $tenant->organization->id)
                 ->where('branch_id', $tenant->branch->id)->lockForUpdate()->findOrFail($data['order_id']);
             $paid = Decimal::toScaledInt($order->getRawOriginal('paid_total'), 2);
@@ -122,6 +127,9 @@ final class PaymentController extends Controller
             }
             $order->update(['paid_total' => Decimal::fromScaledInt($paid + $amount, 2)]);
             $ledger->recordPayment($order, $payment, $request->user()->id, $key);
+            if ($data['method'] === 'mercadopago') {
+                $paymentIntegration->create($payment, $key.':mercadopago');
+            }
 
             return [['data' => $payment->fresh()->toArray()], 201];
         });

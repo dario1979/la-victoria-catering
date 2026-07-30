@@ -8,8 +8,10 @@ use App\Http\Controllers\Api\V1\CustomerAccountController;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DeliveryController;
+use App\Http\Controllers\Api\V1\IntegrationController;
 use App\Http\Controllers\Api\V1\LocationController;
 use App\Http\Controllers\Api\V1\LotController;
+use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\ProductController;
@@ -27,6 +29,8 @@ Route::middleware('web')->prefix('v1')->group(function (): void {
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:auth.login');
     Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:auth.forgot-password');
     Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:auth.reset-password');
+    Route::post('/webhooks/mercadopago', [IntegrationController::class, 'mercadoPagoWebhook'])
+        ->middleware('throttle:integration.webhooks');
 
     Route::middleware('auth')->group(function (): void {
         Route::get('/auth/me', [AuthController::class, 'user']);
@@ -107,6 +111,15 @@ Route::middleware('web')->prefix('v1')->group(function (): void {
             Route::get('/reconciliations', [ReconciliationController::class, 'index']);
             Route::post('/reconciliations', [ReconciliationController::class, 'store']);
             Route::post('/reconciliations/{reconciliation}/status', [ReconciliationController::class, 'resolve']);
+            Route::get('/integration/payment-transactions', [IntegrationController::class, 'payments']);
+            Route::post('/integration/payment-transactions/{paymentGatewayTransaction}/sync', [IntegrationController::class, 'syncPayment']);
+            Route::get('/fiscal-documents', [IntegrationController::class, 'fiscalDocuments']);
+            Route::post('/fiscal-documents', [IntegrationController::class, 'issueFiscal']);
+            Route::post('/fiscal-documents/{fiscalDocument}/reprocess', [IntegrationController::class, 'reprocessFiscal']);
+            Route::get('/notifications', [NotificationController::class, 'index']);
+            Route::get('/notification-preferences', [NotificationController::class, 'preferences']);
+            Route::put('/notification-preferences', [NotificationController::class, 'updatePreferences']);
+            Route::post('/push-subscriptions', [NotificationController::class, 'subscribe']);
 
             Route::get('/alerts', [AlertController::class, 'index']);
             Route::get('/alerts/{alert}', [AlertController::class, 'show']);

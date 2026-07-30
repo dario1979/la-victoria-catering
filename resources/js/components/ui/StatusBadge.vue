@@ -26,6 +26,8 @@ const labels: Record<string, string> = {
     sent: 'Enviada',
     partially_received: 'Recepción parcial',
     received: 'Recibida',
+    pending: 'Pendiente',
+    failed: 'Fallida',
     low: 'Baja',
     medium: 'Media',
     high: 'Alta',

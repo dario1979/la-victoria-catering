@@ -12,4 +12,9 @@ final class ArcaSandboxAdapter implements FiscalIssuer
     {
         throw new RuntimeException('ARCA sandbox credentials and certificates are not configured.');
     }
+
+    public function status(string $externalId): array
+    {
+        throw new RuntimeException('ARCA sandbox credentials and certificates are not configured.');
+    }
 }

@@ -10,6 +10,7 @@ export type View =
     | 'payments'
     | 'procurement'
     | 'finance'
+    | 'notifications'
     | 'alerts';
 
 export type OrderStatus =

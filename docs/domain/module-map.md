@@ -9,7 +9,7 @@
 | Inventario | Lotes, ubicaciones, reservas y movimientos | `StockReserved`, `StockBelowMinimum`, `LotExpired` |
 | Compras | Proveedores, catálogo con historial de precios, órdenes congeladas y recepciones parciales | `PurchaseOrderApproved`, `PurchaseOrderSent`, `PurchaseOrderPartiallyReceived`, `PurchaseOrderReceived`, `SupplierDeliveryDelayed` |
 | Clientes y finanzas | Clientes, ledger, caja, cuentas por pagar y conciliación | `PaymentReceived`, `CashDifferenceDetected`, `ReconciliationMismatchDetected` |
-| Alertas | Reglas, notificaciones, escalamiento y cierre | `AlertRaised`, `AlertResolved` |
-| Integraciones | Puertos, adaptadores y webhooks externos | `IntegrationDeliveryFailed` |
+| Alertas y notificaciones | Reglas, centro interno, email, preferencias, deduplicación, escalamiento y cierre | `AlertRaised`, `NotificationQueued`, `NotificationFailed`, `AlertResolved` |
+| Integraciones | Puertos, adaptadores, estados separados, webhooks y revisión manual | `IntegrationDeliveryFailed`, `PaymentStatusChanged`, `FiscalDocumentAuthorized` |
 
 Los módulos solo se comunican por servicios explícitos, contratos y eventos internos; controllers y componentes Vue no contienen reglas de dominio.

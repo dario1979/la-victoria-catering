@@ -35,10 +35,16 @@ final class ArcaFakeAdapter implements FiscalIssuer
                     'idempotency_key' => $idempotencyKey, 'status' => 'authorized', 'attempts' => 1,
                     'request_payload' => json_encode($invoice, JSON_THROW_ON_ERROR),
                     'response_payload' => json_encode($response, JSON_THROW_ON_ERROR),
+                    'processed_at' => now(),
                     'created_at' => now(), 'updated_at' => now(),
                 ]);
 
                 return new DeliveryResult(true, $response['cae'], $response);
             }));
+    }
+
+    public function status(string $externalId): array
+    {
+        return ['external_id' => $externalId, 'status' => 'authorized'];
     }
 }
