@@ -23,7 +23,7 @@ final class AdjustStock
             }
             $lot = isset($data['lot_id'])
                 ? InventoryLot::query()->lockForUpdate()->findOrFail($data['lot_id'])
-                : $this->createLot($data, $tenant);
+                : $this->createLot($data, $tenant, $userId);
             $product = Product::whereKey($lot->product_id)
                 ->where('organization_id', $tenant->organization->id)->firstOrFail();
             $location = Location::whereKey($lot->location_id)
@@ -60,13 +60,15 @@ final class AdjustStock
         });
     }
 
-    private function createLot(array $data, TenantContext $tenant): InventoryLot
+    private function createLot(array $data, TenantContext $tenant, int $userId): InventoryLot
     {
         Product::whereKey($data['product_id'])->where('organization_id', $tenant->organization->id)->firstOrFail();
         Location::whereKey($data['location_id'])->where('organization_id', $tenant->organization->id)
             ->where('branch_id', $tenant->branch->id)->firstOrFail();
 
         return InventoryLot::create([
+            'organization_id' => $tenant->organization->id,
+            'branch_id' => $tenant->branch->id,
             'product_id' => $data['product_id'],
             'location_id' => $data['location_id'],
             'code' => $data['code'],
@@ -75,6 +77,7 @@ final class AdjustStock
             'reserved_quantity' => '0.000',
             'expires_at' => $data['expires_at'] ?? null,
             'status' => 'available',
+            'created_by' => $userId,
         ]);
     }
 }

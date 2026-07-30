@@ -133,6 +133,11 @@ export const api = {
             path, { method: 'PATCH', body: JSON.stringify(body) },
         ).then((response) => response.data);
     },
+    put<T>(path: string, body: unknown) {
+        return request<ApiEnvelope<T>>(
+            path, { method: 'PUT', body: JSON.stringify(body) },
+        ).then((response) => response.data);
+    },
     getRaw<T>(path: string) {
         return request<T>(path);
     },

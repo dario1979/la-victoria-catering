@@ -10,10 +10,11 @@ import DataState from './ui/DataState.vue';
 import BaseModal from './ui/BaseModal.vue';
 import MetricBlock from './ui/MetricBlock.vue';
 import OperationalPage from './OperationalPage.vue';
+import ProcurementPage from './ProcurementPage.vue';
 import StatusBadge from './ui/StatusBadge.vue';
 
 const session = useSessionStore();
-const validViews: View[] = ['dashboard', 'customers', 'products', 'locations', 'lots', 'orders', 'recipes', 'production', 'payments', 'alerts'];
+const validViews: View[] = ['dashboard', 'customers', 'products', 'locations', 'lots', 'orders', 'recipes', 'production', 'payments', 'procurement', 'alerts'];
 const initialHash = location.hash.replace('#', '') as View;
 const view = ref<View>(validViews.includes(initialHash) ? initialHash : 'dashboard');
 const online = ref(navigator.onLine);
@@ -46,6 +47,7 @@ const navigation: Array<{ id: View; label: string; icon: string; group: string }
     { id: 'products', label: 'Productos', icon: 'PR', group: 'Inventario' },
     { id: 'lots', label: 'Lotes', icon: 'LO', group: 'Inventario' },
     { id: 'locations', label: 'Ubicaciones', icon: 'UB', group: 'Inventario' },
+    { id: 'procurement', label: 'Compras', icon: 'OC', group: 'Inventario' },
     { id: 'alerts', label: 'Alertas', icon: '!', group: 'Control' },
 ];
 const groups = ['Jornada', 'Comercial', 'Obrador', 'Inventario', 'Control'];
@@ -55,9 +57,13 @@ const pageTitle = computed(() => navigation.find((item) => item.id === view.valu
 const activeRole = computed(() => session.user?.organizations.find(
     (organization) => organization.id === session.organizationId,
 )?.pivot.role ?? '');
-const visibleNavigation = computed(() => navigation.filter((item) => (
-    item.id !== 'customers' || ['owner', 'admin', 'sales', 'finance'].includes(activeRole.value)
-)));
+const visibleNavigation = computed(() => navigation.filter((item) => {
+    if (item.id === 'customers') return ['owner', 'admin', 'sales', 'finance'].includes(activeRole.value);
+    if (item.id === 'procurement') {
+        return ['owner', 'admin', 'purchasing', 'inventory', 'production', 'finance'].includes(activeRole.value);
+    }
+    return true;
+}));
 const pageDescription = computed(() => ({
     dashboard: 'Prioridades y actividad de la sucursal activa.',
     customers: 'Relación comercial y datos de contacto.',
@@ -68,6 +74,7 @@ const pageDescription = computed(() => ({
     recipes: 'Versiones e ingredientes de elaboración.',
     production: 'Órdenes, rendimiento, merma y trazabilidad.',
     payments: 'Registro seguro y seguimiento de cobranzas.',
+    procurement: 'Proveedores, órdenes de compra y recepción trazable.',
     alerts: 'Situaciones que requieren revisión o acción.',
 })[view.value]);
 function setConnection() {
@@ -297,6 +304,16 @@ onBeforeUnmount(() => {
                     </section>
                 </div>
             </section>
+
+            <ProcurementPage
+                v-else-if="view === 'procurement'"
+                :key="`procurement-${session.branchId}`"
+                :online="online"
+                :branch-name="session.branch"
+                :role="activeRole"
+                @notice="showNotice"
+                @error="showError"
+            />
 
             <OperationalPage
                 v-else

@@ -33,6 +33,10 @@ Fecha: 2026-07-28
 | Movimientos de caja | No existe | No existe | Escritura interna inmutable | — | Sin UI/API pública | Flujo de pago |
 | Entregas | Dentro de pedidos | No existe listado propio | Estado reflejado en pedido | Entrega fija | Registrar entrega | Flujo vertical |
 | Alertas | `#alerts` | `GET /alerts` | Buscar, filtrar severidad/estado, ordenar, paginar, exportar | Resolución fija | Ver, reconocer, resolver | Flujo de alertas |
+| Proveedores | `#procurement` → Proveedores | `GET /suppliers` | Buscar, filtrar estado, ordenar, paginar, exportar | No existía | Crear, ver, editar, activar/desactivar | Compras, permisos y tenancy |
+| Catálogo proveedor-producto | `#procurement` → Catálogo y precios | `GET /supplier-products` | Buscar, filtrar estado/preferencia, ordenar, paginar, exportar | No existía | Vincular, ver, actualizar condiciones y precio | Historial de precios |
+| Órdenes de compra | `#procurement` → Órdenes | `GET /purchase-orders` | Buscar, filtrar estado, ordenar, paginar, exportar | No existía | Crear/editar borrador, aprobar, enviar, cancelar, recibir | Flujo de compras e idempotencia |
+| Recepciones de compra | `#procurement` → Recepciones | `GET /purchase-receipts` | Buscar, ordenar, paginar, exportar | No existía | Ver trazabilidad; alta contextual desde orden | Stock, lotes y discrepancias |
 | Auditoría | No existe | No existe | Transiciones persistidas en pedido | — | Visible en detalle de pedido | Flujo |
 | Integraciones | No existe | No existe | Adaptadores fake/sandbox sin UI | — | Sin endpoints de gestión | Tests de adaptadores |
 | Exportaciones | Acción en toolbar | Endpoint del listado con `export=xlsx` | Conserva búsqueda, filtros y orden | — | Descarga Excel | Feature DataTable |

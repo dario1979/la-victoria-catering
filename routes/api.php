@@ -11,7 +11,11 @@ use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\ProductionOrderController;
+use App\Http\Controllers\Api\V1\PurchaseOrderController;
+use App\Http\Controllers\Api\V1\PurchaseReceiptController;
 use App\Http\Controllers\Api\V1\RecipeController;
+use App\Http\Controllers\Api\V1\SupplierController;
+use App\Http\Controllers\Api\V1\SupplierProductController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('web')->prefix('v1')->group(function (): void {
@@ -33,6 +37,25 @@ Route::middleware('web')->prefix('v1')->group(function (): void {
             Route::get('/lots', [LotController::class, 'index']);
             Route::get('/lots/{lot}', [LotController::class, 'show']);
             Route::post('/lots/adjustments', [LotController::class, 'adjust']);
+
+            Route::get('/suppliers', [SupplierController::class, 'index']);
+            Route::post('/suppliers', [SupplierController::class, 'store']);
+            Route::get('/suppliers/{supplier}', [SupplierController::class, 'show']);
+            Route::patch('/suppliers/{supplier}', [SupplierController::class, 'update']);
+            Route::post('/suppliers/{supplier}/active', [SupplierController::class, 'setActive']);
+            Route::get('/supplier-products', [SupplierProductController::class, 'index']);
+            Route::post('/supplier-products', [SupplierProductController::class, 'store']);
+            Route::get('/supplier-products/{supplierProduct}', [SupplierProductController::class, 'show']);
+            Route::patch('/supplier-products/{supplierProduct}', [SupplierProductController::class, 'update']);
+            Route::get('/purchase-orders', [PurchaseOrderController::class, 'index']);
+            Route::post('/purchase-orders', [PurchaseOrderController::class, 'store']);
+            Route::get('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show']);
+            Route::put('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'update']);
+            Route::get('/purchase-orders/{purchaseOrder}/allowed-transitions', [PurchaseOrderController::class, 'allowedTransitions']);
+            Route::post('/purchase-orders/{purchaseOrder}/transitions', [PurchaseOrderController::class, 'transition']);
+            Route::get('/purchase-receipts', [PurchaseReceiptController::class, 'index']);
+            Route::post('/purchase-orders/{purchaseOrder}/receipts', [PurchaseReceiptController::class, 'store']);
+            Route::get('/purchase-receipts/{purchaseReceipt}', [PurchaseReceiptController::class, 'show']);
 
             Route::get('/orders', [OrderController::class, 'index']);
             Route::post('/orders', [OrderController::class, 'store']);

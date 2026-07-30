@@ -34,6 +34,14 @@ final class AlertManager
             if ($existing) {
                 DB::table('alerts')->where('id', $existing->id)->update([
                     'occurrences' => $existing->occurrences + 1,
+                    'branch_id' => $branchId,
+                    'event' => $event,
+                    'condition' => $condition,
+                    'severity' => $severity,
+                    'recipient' => $recipient,
+                    'action' => $action,
+                    'related_type' => $relatedType,
+                    'related_id' => $relatedId,
                     'last_seen_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -75,5 +83,17 @@ final class AlertManager
         DB::table('alerts')->where('id', $alertId)->where('status', 'open')->update([
             'status' => 'resolved', 'resolved_at' => now(), 'resolved_by' => $userId, 'updated_at' => now(),
         ]);
+    }
+
+    public function resolveByKey(int $organizationId, string $deduplicationKey, ?int $userId = null): void
+    {
+        DB::table('alerts')
+            ->where('organization_id', $organizationId)
+            ->where('deduplication_key', $deduplicationKey)
+            ->where('status', 'open')
+            ->update([
+                'status' => 'resolved', 'resolved_at' => now(),
+                'resolved_by' => $userId, 'updated_at' => now(),
+            ]);
     }
 }

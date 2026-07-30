@@ -246,6 +246,244 @@ paths:
       responses:
         '201': { $ref: '#/components/responses/Created' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /suppliers:
+    get:
+      summary: Lista, busca, filtra y exporta proveedores de la organización
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Direction'
+        - $ref: '#/components/parameters/Filters'
+        - $ref: '#/components/parameters/Export'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+        '403': { description: Rol sin permiso de consulta de compras }
+    post:
+      summary: Crea un proveedor
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SupplierInput' }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '403': { description: Rol sin permiso de gestión de proveedores }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /suppliers/{supplier}:
+    parameters:
+      - $ref: '#/components/parameters/SupplierId'
+      - $ref: '#/components/parameters/Organization'
+      - $ref: '#/components/parameters/Branch'
+    get:
+      summary: Consulta proveedor, catálogo e historial de precios
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      summary: Actualiza un proveedor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SupplierInput' }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '403': { description: Rol sin permiso de gestión de proveedores }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /suppliers/{supplier}/active:
+    post:
+      summary: Activa o desactiva un proveedor sin órdenes abiertas
+      parameters:
+        - $ref: '#/components/parameters/SupplierId'
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [active]
+              properties:
+                active: { type: boolean }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /supplier-products:
+    get:
+      summary: Lista y exporta el catálogo proveedor-producto con historial
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Direction'
+        - $ref: '#/components/parameters/Filters'
+        - $ref: '#/components/parameters/Export'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+    post:
+      summary: Vincula un producto y abre su primer precio vigente
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SupplierProductInput' }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /supplier-products/{supplierProduct}:
+    parameters:
+      - $ref: '#/components/parameters/SupplierProductId'
+      - $ref: '#/components/parameters/Organization'
+      - $ref: '#/components/parameters/Branch'
+    get:
+      summary: Consulta vínculo e historial completo de precios
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      summary: Actualiza condiciones y agrega un precio si cambió
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SupplierProductInput' }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /purchase-orders:
+    get:
+      summary: Lista, filtra y exporta órdenes de compra de la sucursal
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Direction'
+        - $ref: '#/components/parameters/Filters'
+        - $ref: '#/components/parameters/Export'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+    post:
+      summary: Crea idempotentemente una orden en borrador con snapshots
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PurchaseOrderInput' }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /purchase-orders/{purchaseOrder}:
+    parameters:
+      - $ref: '#/components/parameters/PurchaseOrderId'
+      - $ref: '#/components/parameters/Organization'
+      - $ref: '#/components/parameters/Branch'
+    get:
+      summary: Consulta orden, renglones, transiciones y recepciones
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      summary: Reemplaza un borrador; una orden aprobada es inmutable
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PurchaseOrderInput' }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /purchase-orders/{purchaseOrder}/allowed-transitions:
+    get:
+      summary: Lista transiciones manuales permitidas para la orden
+      parameters:
+        - $ref: '#/components/parameters/PurchaseOrderId'
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+  /purchase-orders/{purchaseOrder}/transitions:
+    post:
+      summary: Aprueba, envía o cancela idempotentemente con auditoría
+      parameters:
+        - $ref: '#/components/parameters/PurchaseOrderId'
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [approved, sent, cancelled] }
+                reason: { type: [string, 'null'], maxLength: 255 }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /purchase-orders/{purchaseOrder}/receipts:
+    post:
+      summary: Registra recepción idempotente y crea lotes y movimientos inmutables
+      parameters:
+        - $ref: '#/components/parameters/PurchaseOrderId'
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PurchaseReceiptInput' }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /purchase-receipts:
+    get:
+      summary: Lista y exporta recepciones de compra de la sucursal
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Direction'
+        - $ref: '#/components/parameters/Filters'
+        - $ref: '#/components/parameters/Export'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+  /purchase-receipts/{purchaseReceipt}:
+    get:
+      summary: Consulta recepción, orden, discrepancias, lotes y movimientos
+      parameters:
+        - $ref: '#/components/parameters/PurchaseReceiptId'
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /orders:
     get:
       summary: Lista y filtra pedidos
@@ -579,6 +817,26 @@ components:
       in: path
       required: true
       schema: { type: integer }
+    SupplierId:
+      name: supplier
+      in: path
+      required: true
+      schema: { type: integer }
+    SupplierProductId:
+      name: supplierProduct
+      in: path
+      required: true
+      schema: { type: integer }
+    PurchaseOrderId:
+      name: purchaseOrder
+      in: path
+      required: true
+      schema: { type: integer }
+    PurchaseReceiptId:
+      name: purchaseReceipt
+      in: path
+      required: true
+      schema: { type: integer }
   responses:
     Ok:
       description: Operación exitosa
@@ -606,6 +864,84 @@ components:
     NotFound:
       description: Recurso inexistente o fuera del tenant activo
   schemas:
+    SupplierInput:
+      type: object
+      required: [trade_name, lead_time_days]
+      properties:
+        trade_name: { type: string, maxLength: 255 }
+        legal_name: { type: [string, 'null'], maxLength: 255 }
+        tax_id: { type: [string, 'null'], maxLength: 32 }
+        email: { type: [string, 'null'], format: email, maxLength: 255 }
+        phone: { type: [string, 'null'], maxLength: 64 }
+        contact_name: { type: [string, 'null'], maxLength: 255 }
+        address: { type: [string, 'null'], maxLength: 2000 }
+        payment_terms: { type: [string, 'null'], maxLength: 255 }
+        lead_time_days: { type: integer, minimum: 0, maximum: 365 }
+        notes: { type: [string, 'null'], maxLength: 5000 }
+        active: { type: boolean, default: true }
+    SupplierProductInput:
+      type: object
+      required: [supplier_id, product_id, purchase_unit, conversion_factor, minimum_quantity, lead_time_days, price, currency, price_valid_from]
+      properties:
+        supplier_id: { type: integer }
+        product_id: { type: integer }
+        supplier_code: { type: [string, 'null'], maxLength: 255 }
+        purchase_unit: { type: string, enum: [unit, kg, g, l, ml] }
+        conversion_factor: { type: string, pattern: '^\d+(\.\d{1,6})?$' }
+        minimum_quantity: { type: string, pattern: '^\d+(\.\d{1,3})?$' }
+        lead_time_days: { type: integer, minimum: 0, maximum: 365 }
+        preferred: { type: boolean, default: false }
+        active: { type: boolean, default: true }
+        price: { type: string, pattern: '^\d+(\.\d{1,2})?$' }
+        currency: { type: string, enum: [ARS, USD] }
+        price_valid_from: { type: string, format: date }
+    PurchaseOrderInput:
+      type: object
+      required: [supplier_id, ordered_at, currency, items]
+      properties:
+        supplier_id: { type: integer }
+        ordered_at: { type: string, format: date }
+        expected_at: { type: [string, 'null'], format: date }
+        currency: { type: string, enum: [ARS, USD] }
+        payment_terms: { type: [string, 'null'], maxLength: 255 }
+        notes: { type: [string, 'null'], maxLength: 5000 }
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [supplier_product_id, quantity]
+            properties:
+              supplier_product_id: { type: integer }
+              quantity: { type: string, pattern: '^\d+(\.\d{1,3})?$' }
+              unit_price: { type: string, pattern: '^\d+(\.\d{1,2})?$' }
+              tax_amount: { type: string, pattern: '^\d+(\.\d{1,2})?$' }
+    PurchaseReceiptInput:
+      type: object
+      required: [received_at, items]
+      properties:
+        received_at: { type: string, format: date-time }
+        notes: { type: [string, 'null'], maxLength: 5000 }
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [purchase_order_item_id, location_id, received_quantity, accepted_quantity, rejected_quantity, lot_code]
+            properties:
+              purchase_order_item_id: { type: integer }
+              location_id: { type: integer }
+              received_quantity: { type: string, pattern: '^\d+(\.\d{1,3})?$' }
+              accepted_quantity: { type: string, pattern: '^\d+(\.\d{1,3})?$' }
+              rejected_quantity: { type: string, pattern: '^\d+(\.\d{1,3})?$' }
+              discrepancy_type:
+                type: [string, 'null']
+                enum: [shortage, excess, damaged, quality, wrong_product, other, null]
+              discrepancy_reason: { type: [string, 'null'], maxLength: 255 }
+              lot_code: { type: string, maxLength: 255 }
+              manufactured_at: { type: [string, 'null'], format: date-time }
+              expires_at: { type: [string, 'null'], format: date }
+              actual_unit_cost: { type: [string, 'null'], pattern: '^\d+(\.\d{1,2})?$' }
     DashboardSummary:
       type: object
       required: [metrics, recent_orders, open_alerts]

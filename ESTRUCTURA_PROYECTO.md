@@ -378,7 +378,6 @@ La revisión visual existente obtuvo 17/20 y no reportó bloqueos P0.
 
 ### Funcionales
 
-- Implementar compras, proveedores, órdenes de compra y recepciones.
 - Completar caja, cuenta corriente, cierres y conciliación.
 - Conectar Mercado Pago en producción.
 - Validar e integrar ARCA en producción.
@@ -387,20 +386,12 @@ La revisión visual existente obtuvo 17/20 y no reportó bloqueos P0.
 
 ### Frontend
 
-- Reemplazar campos de ID por selectores y búsquedas operativas.
 - Convertir requerimientos y trazabilidad JSON en tablas y líneas temporales.
-- Agregar pruebas automatizadas de componentes y flujos.
 - Realizar auditoría con lector de pantalla.
-- Reinstalar las dependencias locales y volver a validar typecheck y build.
 
 ### Contratos
 
-Actualizar OpenAPI para documentar:
-
-- Consulta individual de receta.
-- Actualización de receta.
-- Requerimientos de producción.
-- Trazabilidad de producción.
+Mantener OpenAPI y las rutas sincronizados en cada incremento.
 
 ### Marca
 
@@ -415,13 +406,10 @@ Solicitar:
 
 ## Próxima etapa recomendada
 
-1. Normalizar las dependencias frontend y confirmar `typecheck` y `build`.
-2. Corregir la divergencia del contrato OpenAPI.
-3. Mejorar los formularios operativos y la visualización de trazabilidad.
-4. Implementar compras y proveedores.
-5. Completar caja y conciliación.
-6. Integrar Mercado Pago y ARCA en ambientes reales controlados.
-7. Agregar pruebas frontend y una prueba end-to-end del flujo completo.
+1. Completar caja, cuenta corriente y conciliación.
+2. Mejorar la visualización de trazabilidad de producción.
+3. Integrar Mercado Pago y ARCA en ambientes reales controlados.
+4. Ejecutar el piloto operativo y una prueba end-to-end en navegador real.
 
 ## Documentos relacionados
 

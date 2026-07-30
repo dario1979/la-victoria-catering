@@ -1,6 +1,6 @@
 import type { View } from './types';
 
-export type OperationalModuleView = Exclude<View, 'dashboard'>;
+export type OperationalModuleView = Exclude<View, 'dashboard' | 'procurement'>;
 
 export const operationalPageContent: Record<OperationalModuleView, {
     title: string;
@@ -40,6 +40,7 @@ export function statusLabel(value: string) {
         draft: 'Borrador', confirmed: 'Confirmado', in_production: 'En producción', ready: 'Listo',
         delivered: 'Entregado', cancelled: 'Cancelado', planned: 'Planificada', in_progress: 'En curso',
         completed: 'Completada', approved: 'Aprobada', inactive: 'Inactiva', available: 'Disponible',
+        sent: 'Enviada', partially_received: 'Recepción parcial', received: 'Recibida',
         depleted: 'Agotado', blocked: 'Bloqueado', expired: 'Vencido', open: 'Abierta',
         acknowledged: 'Reconocida', resolved: 'Resuelta', low: 'Baja', medium: 'Media',
         high: 'Alta', critical: 'Crítica', active: 'Activo',

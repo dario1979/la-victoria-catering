@@ -7,7 +7,7 @@
 | Pedidos | Cotización, pedido y máquina de estados | `OrderCreated`, `OrderConfirmed`, `OrderCancelled` |
 | Producción | Planes, órdenes, tandas, rendimiento y merma | `ProductionBatchCompleted` |
 | Inventario | Lotes, ubicaciones, reservas y movimientos | `StockReserved`, `StockBelowMinimum`, `LotExpired` |
-| Compras | Proveedores, órdenes y recepciones | `PurchaseOrderReceived`, `SupplierDeliveryDelayed` |
+| Compras | Proveedores, catálogo con historial de precios, órdenes congeladas y recepciones parciales | `PurchaseOrderApproved`, `PurchaseOrderSent`, `PurchaseOrderPartiallyReceived`, `PurchaseOrderReceived`, `SupplierDeliveryDelayed` |
 | Clientes y finanzas | Clientes, cuenta corriente, pagos y caja | `PaymentReceived`, `CashDifferenceDetected` |
 | Alertas | Reglas, notificaciones, escalamiento y cierre | `AlertRaised`, `AlertResolved` |
 | Integraciones | Puertos, adaptadores y webhooks externos | `IntegrationDeliveryFailed` |

@@ -8,6 +8,7 @@ export type View =
     | 'recipes'
     | 'production'
     | 'payments'
+    | 'procurement'
     | 'alerts';
 
 export type OrderStatus =
