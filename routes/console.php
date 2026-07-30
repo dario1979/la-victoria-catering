@@ -31,3 +31,4 @@ Schedule::job(new RecordWorkerHeartbeat)
     ->name('operations:worker-heartbeat')
     ->everyMinute()
     ->withoutOverlapping();
+Schedule::command('bakery:imports-prune')->dailyAt('03:20')->withoutOverlapping();

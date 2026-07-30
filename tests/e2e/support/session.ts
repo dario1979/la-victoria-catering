@@ -1,4 +1,4 @@
-import { expect, type APIResponse, type Page } from '@playwright/test';
+import { expect, type APIResponse, type Page, type Response } from '@playwright/test';
 
 type LoginData = {
     id: number;
@@ -22,14 +22,22 @@ export async function login(
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Bienvenido a tu jornada.' })).toBeVisible();
 
-    const loginResponsePromise = page.waitForResponse((response) => (
-        response.url().endsWith('/api/v1/auth/login') && response.request().method() === 'POST'
-    ));
     await page.getByLabel('Correo electrónico').fill(email);
     await page.getByLabel('Contraseña', { exact: true }).fill(password);
-    await page.getByRole('button', { name: 'Ingresar', exact: true }).click();
-
-    const loginResponse = await loginResponsePromise;
+    let loginResponse: Response | null = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+        const loginResponsePromise = page.waitForResponse((response) => (
+            response.url().endsWith('/api/v1/auth/login') && response.request().method() === 'POST'
+        ));
+        await page.getByRole('button', { name: 'Ingresar', exact: true }).click();
+        loginResponse = await loginResponsePromise;
+        if (loginResponse.status() !== 429) break;
+        const retryAfterSeconds = Math.min(60, Math.max(1, Number(loginResponse.headers()['retry-after'] ?? 1)));
+        await page.waitForTimeout((retryAfterSeconds * 1000) + 250);
+        await expect(page.getByRole('button', { name: 'Ingresar', exact: true })).toBeEnabled();
+    }
+    expect(loginResponse).not.toBeNull();
+    if (!loginResponse) throw new Error('Login response was not captured.');
     expect(loginResponse.status()).toBe(200);
     const loginBody = await loginResponse.json() as { data: LoginData };
     await expect(page.getByRole('heading', { level: 1, name: 'Resumen' })).toBeVisible();

@@ -135,4 +135,19 @@ test('@viewport dashboard, modal and table actions stay usable and accessible', 
         .withTags(['wcag2a', 'wcag2aa'])
         .analyze();
     expect(accessibility.violations).toEqual([]);
+
+    if (mobileNavigation) {
+        await openMore(page);
+        await page.getByRole('dialog').getByRole('button', { name: 'Importar', exact: true }).click();
+    } else {
+        await page.getByRole('button', { name: 'Importar', exact: true }).click();
+    }
+    await expect(page.getByRole('heading', { level: 1, name: 'Importar' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Prepará los datos antes de incorporarlos.' })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    const importAccessibility = await new AxeBuilder({ page })
+        .include('main')
+        .withTags(['wcag2a', 'wcag2aa'])
+        .analyze();
+    expect(importAccessibility.violations).toEqual([]);
 });

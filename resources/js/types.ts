@@ -11,6 +11,7 @@ export type View =
     | 'procurement'
     | 'finance'
     | 'review'
+    | 'imports'
     | 'notifications'
     | 'alerts';
 

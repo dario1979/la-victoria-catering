@@ -266,6 +266,152 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { description: El webhook no admite revisión en su estado actual }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /imports/definitions:
+    get:
+      operationId: importDefinitions
+      summary: Devuelve campos, reglas, valores permitidos y ejemplos ficticios por tipo
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '403': { description: Rol sin permiso de importación }
+  /import-templates/{type}:
+    get:
+      operationId: downloadImportTemplate
+      summary: Descarga una plantilla CSV neutralizada y reutilizable
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [customers, products, suppliers, supplier_products, locations, initial_stock, recipes]
+      responses:
+        '200': { description: Plantilla CSV con encabezados y ejemplo ficticio }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /imports:
+    get:
+      operationId: listImportBatches
+      summary: Lista lotes de importación de la organización y sucursal activas
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+        '403': { description: Rol sin permiso de importación }
+    post:
+      operationId: uploadImportBatch
+      summary: Almacena temporalmente y analiza un CSV o XLSX acotado
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [type, file]
+              properties:
+                type:
+                  type: string
+                  enum: [customers, products, suppliers, supplier_products, locations, initial_stock, recipes]
+                file: { type: string, format: binary }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '413': { description: Archivo superior al límite configurado }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /imports/{importBatch}:
+    get:
+      operationId: showImportBatch
+      summary: Consulta estado, mapeo, vista previa y errores sin revelar el archivo temporal
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - name: importBatch
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /imports/{importBatch}/dry-run:
+    post:
+      operationId: dryRunImportBatch
+      summary: Mapea y valida todas las filas sin mutar datos operativos
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - name: importBatch
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mapping]
+              properties:
+                mapping:
+                  type: object
+                  additionalProperties: { type: string }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '409': { description: El lote ya fue confirmado o su archivo cambió }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /imports/{importBatch}/confirm:
+    post:
+      operationId: confirmImportBatch
+      summary: Confirma idempotentemente un dry-run válido y despacha el job
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: importBatch
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '202': { description: Lote en cola }
+        '409': { description: Falta un dry-run válido y sin errores }
+  /imports/{importBatch}/rollback:
+    post:
+      operationId: rollbackImportBatch
+      summary: Revierte sólo registros sin dependencias o compensa stock con un movimiento inmutable
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: importBatch
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '409': { description: El lote o sus dependencias impiden un rollback seguro }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /imports/{importBatch}/errors:
+    get:
+      operationId: downloadImportErrors
+      summary: Descarga errores CSV sin copiar valores originales y con fórmulas neutralizadas
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - name: importBatch
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Informe CSV de errores }
+        '404': { $ref: '#/components/responses/NotFound' }
   /customers:
     get:
       summary: Lista y busca clientes

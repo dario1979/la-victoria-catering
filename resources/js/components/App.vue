@@ -13,11 +13,12 @@ import OperationalPage from './OperationalPage.vue';
 import ProcurementPage from './ProcurementPage.vue';
 import FinancialPage from './FinancialPage.vue';
 import ManualReviewPage from './ManualReviewPage.vue';
+import ImportPage from './ImportPage.vue';
 import NotificationPage from './NotificationPage.vue';
 import StatusBadge from './ui/StatusBadge.vue';
 
 const session = useSessionStore();
-const validViews: View[] = ['dashboard', 'customers', 'products', 'locations', 'lots', 'orders', 'recipes', 'production', 'payments', 'procurement', 'finance', 'review', 'notifications', 'alerts'];
+const validViews: View[] = ['dashboard', 'customers', 'products', 'locations', 'lots', 'orders', 'recipes', 'production', 'payments', 'procurement', 'finance', 'review', 'imports', 'notifications', 'alerts'];
 const initialHash = location.hash.replace('#', '') as View;
 const view = ref<View>(validViews.includes(initialHash) ? initialHash : 'dashboard');
 const online = ref(navigator.onLine);
@@ -54,6 +55,7 @@ const navigation: Array<{ id: View; label: string; icon: string; group: string }
     { id: 'procurement', label: 'Compras', icon: 'OC', group: 'Inventario' },
     { id: 'alerts', label: 'Alertas', icon: '!', group: 'Control' },
     { id: 'review', label: 'Revisión', icon: 'RV', group: 'Control' },
+    { id: 'imports', label: 'Importar', icon: 'IM', group: 'Control' },
     { id: 'notifications', label: 'Notificaciones', icon: 'NO', group: 'Control' },
 ];
 const groups = ['Jornada', 'Comercial', 'Obrador', 'Inventario', 'Control'];
@@ -70,7 +72,7 @@ const visibleNavigation = computed(() => navigation.filter((item) => {
         return ['owner', 'admin', 'purchasing', 'inventory', 'production', 'finance'].includes(activeRole.value);
     }
     if (item.id === 'finance') return ['owner', 'admin', 'sales', 'finance'].includes(activeRole.value);
-    if (item.id === 'review') return ['owner', 'admin'].includes(activeRole.value);
+    if (item.id === 'review' || item.id === 'imports') return ['owner', 'admin'].includes(activeRole.value);
     return true;
 }));
 const pageDescription = computed(() => ({
@@ -87,6 +89,7 @@ const pageDescription = computed(() => ({
     finance: 'Caja, cuentas corrientes, obligaciones y conciliación.',
     alerts: 'Situaciones que requieren revisión o acción.',
     review: 'Fallos y evidencia que requieren una decisión auditada.',
+    imports: 'Carga inicial validada con vista previa y confirmación en cola.',
     notifications: 'Mensajes internos, entregas y preferencias personales.',
 })[view.value]);
 function setConnection() {
@@ -349,6 +352,15 @@ onBeforeUnmount(() => {
             <ManualReviewPage
                 v-else-if="view === 'review'"
                 :key="`review-${session.branchId}`"
+                :online="online"
+                :branch-name="session.branch"
+                @notice="showNotice"
+                @error="showError"
+            />
+
+            <ImportPage
+                v-else-if="view === 'imports'"
+                :key="`imports-${session.branchId}`"
                 :online="online"
                 :branch-name="session.branch"
                 @notice="showNotice"

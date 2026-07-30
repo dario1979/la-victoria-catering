@@ -34,7 +34,7 @@ async function request<T>(
     }
     const headers = new Headers(init.headers);
     headers.set('Accept', 'application/json');
-    if (init.body) headers.set('Content-Type', 'application/json');
+    if (init.body && !(init.body instanceof FormData)) headers.set('Content-Type', 'application/json');
     if (csrfToken && method !== 'GET') headers.set('X-CSRF-TOKEN', csrfToken);
     if (options.idempotencyKey) headers.set('Idempotency-Key', options.idempotencyKey);
     if (options.tenant !== false && organizationId && branchId) {
@@ -127,6 +127,29 @@ export const api = {
         return request<ApiEnvelope<T>>(
             path, { method: 'POST', body: JSON.stringify(body) }, { idempotencyKey },
         ).then((response) => response.data);
+    },
+    uploadRaw<T>(path: string, body: FormData, idempotencyKey?: string) {
+        return request<T>(path, { method: 'POST', body }, { timeoutMs: 60_000, idempotencyKey });
+    },
+    async download(path: string, fallbackName: string) {
+        const headers = new Headers({ Accept: '*/*' });
+        if (organizationId && branchId) {
+            headers.set('X-Organization-ID', String(organizationId));
+            headers.set('X-Branch-ID', String(branchId));
+        }
+        const response = await fetch(`/api/v1${path}`, {
+            headers, credentials: 'same-origin', cache: 'no-store',
+        });
+        if (!response.ok) throw new HttpError({ message: 'No se pudo descargar el archivo.', status: response.status, errors: {} });
+        const blob = await response.blob();
+        const disposition = response.headers.get('Content-Disposition') ?? '';
+        const filename = disposition.match(/filename="?([^";]+)"?/)?.[1] ?? fallbackName;
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = filename;
+        anchor.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
     },
     patch<T>(path: string, body: unknown) {
         return request<ApiEnvelope<T>>(

@@ -140,6 +140,7 @@ Backup, restauración y ensayo verificable:
 - [Verificación de integridad](integrity.md)
 - [Observabilidad operacional](observability.md)
 - [Revisión manual y recuperación de colas](manual-review.md)
+- [Importación inicial del piloto](initial-imports.md)
 
 Estado:
 

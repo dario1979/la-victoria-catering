@@ -302,6 +302,28 @@ final class BakeryIntegrityChecker
                         ->whereNull('reviewer.user_id'))),
             'webhook.organization_id', 'webhook.branch_id', $organizationId, $branchId
         ));
+        $this->query('imports.tenant_alignment', 'Los lotes de importación respetan organización, sucursal y autor.', $this->scope(
+            DB::table('import_batches as batch')
+                ->join('branches as branch', 'branch.id', '=', 'batch.branch_id')
+                ->leftJoin('organization_user as membership', function ($join): void {
+                    $join->on('membership.user_id', '=', 'batch.created_by')
+                        ->on('membership.organization_id', '=', 'batch.organization_id');
+                })
+                ->leftJoin('branch_user as assignment', function ($join): void {
+                    $join->on('assignment.user_id', '=', 'batch.created_by')
+                        ->on('assignment.branch_id', '=', 'batch.branch_id');
+                })
+                ->selectRaw('batch.id AS violation_id')
+                ->where(fn (Builder $query) => $query
+                    ->whereColumn('branch.organization_id', '!=', 'batch.organization_id')
+                    ->orWhereNull('membership.user_id')
+                    ->orWhereNull('assignment.user_id')
+                    ->orWhere(fn (Builder $completed) => $completed->where('batch.status', 'completed')
+                        ->whereNull('batch.completed_at'))
+                    ->orWhere(fn (Builder $rolledBack) => $rolledBack->where('batch.status', 'rolled_back')
+                        ->whereNull('batch.rolled_back_at'))),
+            'batch.organization_id', 'batch.branch_id', $organizationId, $branchId
+        ));
         $this->query('idempotency.payloads', 'Las claves idempotentes tienen hash y respuesta válidos.', DB::table('idempotency_keys')
             ->selectRaw('id AS violation_id')
             ->where(fn (Builder $query) => $query
