@@ -10,7 +10,7 @@ externa ni se afirmó una validación visual inexistente.
 La auditoría estática y las pruebas de componentes sí se completaron:
 
 - detector Impeccable sin hallazgos;
-- 8 archivos y 20 pruebas Vitest aprobados;
+- 9 archivos y 23 pruebas Vitest aprobados;
 - navegación por teclado del menú de acciones cubierta;
 - foco, descarte y restauración en modales cubiertos;
 - typecheck y build aprobados;
@@ -43,6 +43,7 @@ Pantallas pendientes de evidencia visual:
 - cobranzas;
 - alertas.
 - compras: órdenes, proveedores, catálogo y recepciones.
+- caja y finanzas: sesiones, cuentas corrientes, obligaciones y conciliaciones.
 
 También quedan pendientes el recorrido con lector de pantalla, contraste
 renderizado, zoom, clipping, overlays, scroll y foco visible en navegador real.
@@ -85,6 +86,11 @@ que colapsan de cuatro a dos y una columna, y detalle semántico mediante `dl`.
 Las pruebas cubren disponibilidad de acciones por rol, recepción contextual,
 confirmación idempotente y bloqueo connected-first. La inspección en 320, 768 y
 1440 px sigue pendiente por la misma indisponibilidad del navegador integrado.
+
+El centro financiero reutiliza el mismo patrón responsive de pestañas, DataTable
+server-side y modales. Mantiene controles por rol, deshabilita mutaciones sin
+conexión y conserva la clave idempotente durante reintentos inciertos. La
+inspección visual real también permanece pendiente.
 
 ## Severidad
 

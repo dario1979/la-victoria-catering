@@ -11,10 +11,11 @@ import BaseModal from './ui/BaseModal.vue';
 import MetricBlock from './ui/MetricBlock.vue';
 import OperationalPage from './OperationalPage.vue';
 import ProcurementPage from './ProcurementPage.vue';
+import FinancialPage from './FinancialPage.vue';
 import StatusBadge from './ui/StatusBadge.vue';
 
 const session = useSessionStore();
-const validViews: View[] = ['dashboard', 'customers', 'products', 'locations', 'lots', 'orders', 'recipes', 'production', 'payments', 'procurement', 'alerts'];
+const validViews: View[] = ['dashboard', 'customers', 'products', 'locations', 'lots', 'orders', 'recipes', 'production', 'payments', 'procurement', 'finance', 'alerts'];
 const initialHash = location.hash.replace('#', '') as View;
 const view = ref<View>(validViews.includes(initialHash) ? initialHash : 'dashboard');
 const online = ref(navigator.onLine);
@@ -42,6 +43,7 @@ const navigation: Array<{ id: View; label: string; icon: string; group: string }
     { id: 'orders', label: 'Pedidos', icon: 'PE', group: 'Comercial' },
     { id: 'customers', label: 'Clientes', icon: 'CL', group: 'Comercial' },
     { id: 'payments', label: 'Cobranzas', icon: '$', group: 'Comercial' },
+    { id: 'finance', label: 'Caja y finanzas', icon: 'CF', group: 'Comercial' },
     { id: 'production', label: 'Producción', icon: 'OP', group: 'Obrador' },
     { id: 'recipes', label: 'Recetas', icon: 'RE', group: 'Obrador' },
     { id: 'products', label: 'Productos', icon: 'PR', group: 'Inventario' },
@@ -59,9 +61,11 @@ const activeRole = computed(() => session.user?.organizations.find(
 )?.pivot.role ?? '');
 const visibleNavigation = computed(() => navigation.filter((item) => {
     if (item.id === 'customers') return ['owner', 'admin', 'sales', 'finance'].includes(activeRole.value);
+    if (item.id === 'payments') return ['owner', 'admin', 'sales', 'finance'].includes(activeRole.value);
     if (item.id === 'procurement') {
         return ['owner', 'admin', 'purchasing', 'inventory', 'production', 'finance'].includes(activeRole.value);
     }
+    if (item.id === 'finance') return ['owner', 'admin', 'sales', 'finance'].includes(activeRole.value);
     return true;
 }));
 const pageDescription = computed(() => ({
@@ -75,6 +79,7 @@ const pageDescription = computed(() => ({
     production: 'Órdenes, rendimiento, merma y trazabilidad.',
     payments: 'Registro seguro y seguimiento de cobranzas.',
     procurement: 'Proveedores, órdenes de compra y recepción trazable.',
+    finance: 'Caja, cuentas corrientes, obligaciones y conciliación.',
     alerts: 'Situaciones que requieren revisión o acción.',
 })[view.value]);
 function setConnection() {
@@ -308,6 +313,16 @@ onBeforeUnmount(() => {
             <ProcurementPage
                 v-else-if="view === 'procurement'"
                 :key="`procurement-${session.branchId}`"
+                :online="online"
+                :branch-name="session.branch"
+                :role="activeRole"
+                @notice="showNotice"
+                @error="showError"
+            />
+
+            <FinancialPage
+                v-else-if="view === 'finance'"
+                :key="`finance-${session.branchId}`"
                 :online="online"
                 :branch-name="session.branch"
                 :role="activeRole"

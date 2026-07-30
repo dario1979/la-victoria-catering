@@ -31,7 +31,7 @@ Para instalación local sin Docker se requiere PHP 8.4+, Composer y Node 22+.
 Ejecutar `scripts/install.ps1` en Windows o `scripts/install.sh` en Unix.
 
 Crear pedidos u órdenes de compra, recibir mercadería, ajustar stock, cambiar
-estados, producir, cobrar y entregar requiere `Idempotency-Key`. La organización y sucursal se derivan de la sesión y
+estados, producir, cobrar, operar caja, conciliar y entregar requiere `Idempotency-Key`. La organización y sucursal se derivan de la sesión y
 se envían mediante `X-Organization-ID` y `X-Branch-ID`.
 
 La PWA es *connected-first*: las mutaciones usan red exclusivamente y las
@@ -45,6 +45,7 @@ El service worker controla `/`, pero no cachea respuestas de `/api/v1`.
 - [Plan del flujo vertical](docs/plans/first-operable-vertical-slice.md)
 - [Mapa de módulos](docs/domain/module-map.md)
 - [Operación de compras](docs/modules/procurement.md)
+- [Caja, cuentas operativas y conciliación](docs/modules/finance-operations.md)
 - [Contrato HTTP](docs/contracts/openapi.yaml)
 - [Decisiones](docs/decisions/)
 

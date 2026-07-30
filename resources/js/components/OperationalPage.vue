@@ -108,6 +108,7 @@ const deliveryForm = reactive({ method: 'pickup', notes: '' });
 const paymentForm = reactive({
     order_id: null as number | null, amount: '0.00',
     method: 'transfer' as Payment['method'], external_reference: '',
+    cash_session_id: null as number | null,
 });
 const recipeForm = reactive({
     product_id: null as number | null, expected_yield: '1.000',
@@ -329,7 +330,7 @@ function openCreate(mode: ModalMode = 'create', row: Record<string, any> | null 
     if (props.view === 'orders') Object.assign(orderForm, { customer_id: null, customer_name: '', required_at: '', product_id: null, quantity: '1.000', unit_price: '0.00' });
     if (props.view === 'recipes') Object.assign(recipeForm, { product_id: null, expected_yield: '1.000', yield_unit: 'unit', theoretical_waste_percent: '0.00', status: 'draft', items: [{ ingredient_product_id: null, quantity: '1.000', unit: 'unit' }] });
     if (props.view === 'production') Object.assign(productionForm, { order_id: null, recipe_id: null, planned_quantity: '1.000', unit: 'unit', actual_yield: '1.000', waste_quantity: '0.000', destination_location_id: null, manufactured_at: '', expires_at: '', observations: '' });
-    if (props.view === 'payments' || mode === 'payment-create') Object.assign(paymentForm, { order_id: row?.id ?? null, amount: row ? decimalSubtract(row.total, row.paid_total) : '0.00', method: 'transfer', external_reference: '' });
+    if (props.view === 'payments' || mode === 'payment-create') Object.assign(paymentForm, { order_id: row?.id ?? null, amount: row ? decimalSubtract(row.total, row.paid_total) : '0.00', method: 'transfer', external_reference: '', cash_session_id: null });
     if (row) selectedOrderLabel.value = `Pedido #${row.id} · ${row.customer_name ?? ''}`;
     modal.open = true;
 }
@@ -665,7 +666,14 @@ function preparePayment() {
         tone: 'primary',
         details: [`Medio: ${paymentMethod(paymentForm.method)}`, paymentForm.external_reference ? `Referencia: ${paymentForm.external_reference}` : 'Sin referencia externa'],
         execute: () => mutate(async () => {
-            const result = await api.post<Record<string, any>>('/payments', paymentForm, paymentKey);
+            const payload = {
+                order_id: paymentForm.order_id,
+                amount: paymentForm.amount,
+                method: paymentForm.method,
+                external_reference: paymentForm.external_reference || null,
+                ...(paymentForm.method === 'cash' ? { cash_session_id: paymentForm.cash_session_id } : {}),
+            };
+            const result = await api.post<Record<string, any>>('/payments', payload, paymentKey);
             paymentKey = idempotencyKey('payment');
             return result;
         }, 'Pago registrado.'),
@@ -933,6 +941,9 @@ function recipeSelectionLabel(row: Record<string, unknown> | null) {
                 </label>
                 <label>Importe<input v-model="paymentForm.amount" name="amount" autofocus required min="0.01" step="0.01" type="number"></label>
                 <label>Medio<select v-model="paymentForm.method" name="method"><option value="cash">Efectivo</option><option value="transfer">Transferencia</option><option value="mercadopago">Mercado Pago</option><option value="card">Tarjeta</option></select></label>
+                <label v-if="paymentForm.method === 'cash'">Sesión de caja
+                    <RemoteSelect v-model="paymentForm.cash_session_id" name="cash_session_id" required endpoint="/cash-sessions" sort="opened_at" label-key="register.name" secondary-key="opened_at" :filters="{ status: 'open' }" placeholder="Buscar caja abierta" />
+                </label>
                 <label>Referencia externa<input v-model="paymentForm.external_reference" name="external_reference" maxlength="255" placeholder="Opcional"></label>
             </template>
 

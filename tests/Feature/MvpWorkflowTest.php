@@ -20,6 +20,8 @@ class MvpWorkflowTest extends TestCase
 
     private int $branchId;
 
+    private int $userId;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -31,6 +33,7 @@ class MvpWorkflowTest extends TestCase
             'created_at' => now(), 'updated_at' => now(),
         ]);
         $user = User::factory()->create();
+        $this->userId = $user->id;
         DB::table('organization_user')->insert([
             'organization_id' => $this->organizationId, 'user_id' => $user->id, 'role' => 'admin',
             'created_at' => now(), 'updated_at' => now(),
@@ -128,7 +131,10 @@ class MvpWorkflowTest extends TestCase
     public function test_payment_retry_changes_balance_and_cash_once(): void
     {
         $order = $this->order('confirmed', 5000);
-        $payload = ['order_id' => $order, 'amount' => 1200, 'method' => 'cash'];
+        $payload = [
+            'order_id' => $order, 'amount' => 1200, 'method' => 'cash',
+            'cash_session_id' => $this->openCashSession(),
+        ];
 
         $this->withHeader('Idempotency-Key', 'payment-1')->postJson('/api/v1/payments', $payload)->assertCreated();
         $this->withHeader('Idempotency-Key', 'payment-1')->postJson('/api/v1/payments', $payload)
@@ -137,13 +143,21 @@ class MvpWorkflowTest extends TestCase
         $this->assertDatabaseHas('orders', ['id' => $order, 'paid_total' => 1200]);
         $this->assertDatabaseCount('payments', 1);
         $this->assertDatabaseCount('cash_entries', 1);
+        $this->assertDatabaseCount('cash_movements', 2);
     }
 
     public function test_same_idempotency_key_cannot_be_reused_for_different_payload(): void
     {
         $order = $this->order('confirmed', 5000);
-        $first = ['order_id' => $order, 'amount' => 1200, 'method' => 'cash'];
-        $second = ['order_id' => $order, 'amount' => 1300, 'method' => 'cash'];
+        $cashSession = $this->openCashSession();
+        $first = [
+            'order_id' => $order, 'amount' => 1200, 'method' => 'cash',
+            'cash_session_id' => $cashSession,
+        ];
+        $second = [
+            'order_id' => $order, 'amount' => 1300, 'method' => 'cash',
+            'cash_session_id' => $cashSession,
+        ];
         $this->withHeader('Idempotency-Key', 'payment-1')->postJson('/api/v1/payments', $first)->assertCreated();
         $this->withHeader('Idempotency-Key', 'payment-1')->postJson('/api/v1/payments', $second)
             ->assertUnprocessable()->assertJsonValidationErrors('Idempotency-Key');
@@ -181,6 +195,34 @@ class MvpWorkflowTest extends TestCase
             'reserved_quantity' => 0, 'expires_at' => $expiry, 'status' => 'available',
             'created_at' => now(), 'updated_at' => now(),
         ]);
+    }
+
+    private function openCashSession(): int
+    {
+        $register = DB::table('cash_registers')->insertGetId([
+            'organization_id' => $this->organizationId, 'branch_id' => $this->branchId,
+            'name' => 'Main register', 'active' => true, 'created_by' => $this->userId,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        DB::table('cash_register_user')->insert([
+            'cash_register_id' => $register, 'user_id' => $this->userId,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $session = DB::table('cash_sessions')->insertGetId([
+            'organization_id' => $this->organizationId, 'branch_id' => $this->branchId,
+            'cash_register_id' => $register, 'status' => 'open', 'opening_balance_cents' => 0,
+            'opened_by' => $this->userId, 'opened_at' => now(),
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        DB::table('cash_movements')->insert([
+            'organization_id' => $this->organizationId, 'branch_id' => $this->branchId,
+            'cash_session_id' => $session, 'kind' => 'opening', 'amount_cents' => 0,
+            'reason' => 'Saldo inicial', 'performed_by' => $this->userId,
+            'occurred_at' => now(), 'idempotency_key' => "test-opening-{$session}",
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        return $session;
     }
 
     private function order(string $status, float $total): int

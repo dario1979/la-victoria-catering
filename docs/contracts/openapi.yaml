@@ -696,6 +696,252 @@ paths:
         - $ref: '#/components/parameters/Branch'
       responses:
         '200': { $ref: '#/components/responses/Ok' }
+  /payments/{payment}/reverse:
+    post:
+      summary: Revierte un cobro sin mutar el original y ajusta pedido, ledger y caja
+      parameters:
+        - { name: payment, in: path, required: true, schema: { type: integer } }
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /cash-registers:
+    get:
+      summary: Lista y exporta cajas autorizadas de la sucursal
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Filters'
+        - $ref: '#/components/parameters/Export'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+    post:
+      summary: Crea una caja por sucursal y asigna usuarios autorizados
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '403': { description: Rol sin permiso de administración de caja }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /cash-registers/{cashRegister}/open:
+    post:
+      summary: Abre una sesión con saldo inicial exacto y evita aperturas incompatibles
+      parameters:
+        - { name: cashRegister, in: path, required: true, schema: { type: integer } }
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '403': { description: Usuario no autorizado para la caja }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /cash-sessions:
+    get:
+      summary: Lista, filtra y exporta sesiones y arqueos de la sucursal
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Filters'
+        - $ref: '#/components/parameters/Export'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+  /cash-sessions/{cashSession}:
+    get:
+      summary: Consulta apertura, cierre y movimientos inmutables
+      parameters:
+        - { name: cashSession, in: path, required: true, schema: { type: integer } }
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /cash-sessions/{cashSession}/movements:
+    post:
+      summary: Registra ingreso o egreso inmutable en una sesión abierta
+      parameters:
+        - { name: cashSession, in: path, required: true, schema: { type: integer } }
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /cash-movements/{cashMovement}/reverse:
+    post:
+      summary: Crea el contramovimiento de una operación de caja
+      parameters:
+        - { name: cashMovement, in: path, required: true, schema: { type: integer } }
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /cash-sessions/{cashSession}/close:
+    post:
+      summary: Calcula saldo esperado y registra conteo, diferencia y observaciones
+      parameters:
+        - { name: cashSession, in: path, required: true, schema: { type: integer } }
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /cash-sessions/{cashSession}/approve-difference:
+    post:
+      summary: Aprueba una diferencia cerrada y resuelve su alerta
+      parameters:
+        - { name: cashSession, in: path, required: true, schema: { type: integer } }
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '403': { description: Rol sin permiso de aprobación }
+  /customer-accounts:
+    get:
+      summary: Lista y exporta saldos y deuda vencida derivados del ledger
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Filters'
+        - $ref: '#/components/parameters/Export'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+  /customer-accounts/{customer}:
+    get:
+      summary: Consulta saldo, estado y deuda vencida de un cliente
+      parameters:
+        - { name: customer, in: path, required: true, schema: { type: integer } }
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /customer-accounts/{customer}/entries:
+    get:
+      summary: Lista y exporta cargos, pagos, anticipos, créditos y reversos
+      parameters:
+        - { name: customer, in: path, required: true, schema: { type: integer } }
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Export'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+    post:
+      summary: Agrega una partida inmutable a la cuenta corriente
+      parameters:
+        - { name: customer, in: path, required: true, schema: { type: integer } }
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /customer-account-entries/{customerAccountEntry}/reverse:
+    post:
+      summary: Revierte una partida del cliente mediante un asiento opuesto
+      parameters:
+        - { name: customerAccountEntry, in: path, required: true, schema: { type: integer } }
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /accounts-payable:
+    get:
+      summary: Lista y exporta obligaciones originadas por recepciones
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Filters'
+        - $ref: '#/components/parameters/Export'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+  /accounts-payable/{accountPayable}:
+    get:
+      summary: Consulta obligación, proveedor y pagos
+      parameters:
+        - { name: accountPayable, in: path, required: true, schema: { type: integer } }
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /accounts-payable/{accountPayable}/payments:
+    post:
+      summary: Registra un pago manual exacto sin superar el saldo
+      parameters:
+        - { name: accountPayable, in: path, required: true, schema: { type: integer } }
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /accounts-payable-payments/{accountPayablePayment}/reverse:
+    post:
+      summary: Revierte un pago a proveedor mediante contramovimiento
+      parameters:
+        - { name: accountPayablePayment, in: path, required: true, schema: { type: integer } }
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /reconciliations:
+    get:
+      summary: Lista y exporta conciliaciones de la sucursal
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Filters'
+        - $ref: '#/components/parameters/Export'
+      responses:
+        '200': { $ref: '#/components/responses/Paginated' }
+    post:
+      summary: Vincula movimiento interno y evidencia externa sin confiar en el proveedor
+      parameters:
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /reconciliations/{reconciliation}/status:
+    post:
+      summary: Marca conciliación coincidente, con diferencia, ignorada o resuelta
+      parameters:
+        - { name: reconciliation, in: path, required: true, schema: { type: integer } }
+        - $ref: '#/components/parameters/Organization'
+        - $ref: '#/components/parameters/Branch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /alerts:
     get:
       summary: Lista y filtra alertas operativas

@@ -8,7 +8,7 @@
 | Producción | Planes, órdenes, tandas, rendimiento y merma | `ProductionBatchCompleted` |
 | Inventario | Lotes, ubicaciones, reservas y movimientos | `StockReserved`, `StockBelowMinimum`, `LotExpired` |
 | Compras | Proveedores, catálogo con historial de precios, órdenes congeladas y recepciones parciales | `PurchaseOrderApproved`, `PurchaseOrderSent`, `PurchaseOrderPartiallyReceived`, `PurchaseOrderReceived`, `SupplierDeliveryDelayed` |
-| Clientes y finanzas | Clientes, cuenta corriente, pagos y caja | `PaymentReceived`, `CashDifferenceDetected` |
+| Clientes y finanzas | Clientes, ledger, caja, cuentas por pagar y conciliación | `PaymentReceived`, `CashDifferenceDetected`, `ReconciliationMismatchDetected` |
 | Alertas | Reglas, notificaciones, escalamiento y cierre | `AlertRaised`, `AlertResolved` |
 | Integraciones | Puertos, adaptadores y webhooks externos | `IntegrationDeliveryFailed` |
 

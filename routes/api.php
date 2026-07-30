@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AccountPayableController;
 use App\Http\Controllers\Api\V1\AlertController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\CashController;
+use App\Http\Controllers\Api\V1\CustomerAccountController;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DeliveryController;
@@ -14,6 +17,7 @@ use App\Http\Controllers\Api\V1\ProductionOrderController;
 use App\Http\Controllers\Api\V1\PurchaseOrderController;
 use App\Http\Controllers\Api\V1\PurchaseReceiptController;
 use App\Http\Controllers\Api\V1\RecipeController;
+use App\Http\Controllers\Api\V1\ReconciliationController;
 use App\Http\Controllers\Api\V1\SupplierController;
 use App\Http\Controllers\Api\V1\SupplierProductController;
 use Illuminate\Support\Facades\Route;
@@ -77,6 +81,32 @@ Route::middleware('web')->prefix('v1')->group(function (): void {
             Route::get('/payments', [PaymentController::class, 'index']);
             Route::post('/payments', [PaymentController::class, 'store']);
             Route::get('/payments/{payment}', [PaymentController::class, 'show']);
+            Route::post('/payments/{payment}/reverse', [PaymentController::class, 'reverse']);
+
+            Route::get('/cash-registers', [CashController::class, 'registers']);
+            Route::post('/cash-registers', [CashController::class, 'storeRegister']);
+            Route::post('/cash-registers/{cashRegister}/open', [CashController::class, 'open']);
+            Route::get('/cash-sessions', [CashController::class, 'sessions']);
+            Route::get('/cash-sessions/{cashSession}', [CashController::class, 'show']);
+            Route::post('/cash-sessions/{cashSession}/movements', [CashController::class, 'movement']);
+            Route::post('/cash-movements/{cashMovement}/reverse', [CashController::class, 'reverse']);
+            Route::post('/cash-sessions/{cashSession}/close', [CashController::class, 'close']);
+            Route::post('/cash-sessions/{cashSession}/approve-difference', [CashController::class, 'approveDifference']);
+
+            Route::get('/customer-accounts', [CustomerAccountController::class, 'index']);
+            Route::get('/customer-accounts/{customer}', [CustomerAccountController::class, 'summary']);
+            Route::get('/customer-accounts/{customer}/entries', [CustomerAccountController::class, 'entries']);
+            Route::post('/customer-accounts/{customer}/entries', [CustomerAccountController::class, 'store']);
+            Route::post('/customer-account-entries/{customerAccountEntry}/reverse', [CustomerAccountController::class, 'reverse']);
+
+            Route::get('/accounts-payable', [AccountPayableController::class, 'index']);
+            Route::get('/accounts-payable/{accountPayable}', [AccountPayableController::class, 'show']);
+            Route::post('/accounts-payable/{accountPayable}/payments', [AccountPayableController::class, 'pay']);
+            Route::post('/accounts-payable-payments/{accountPayablePayment}/reverse', [AccountPayableController::class, 'reverse']);
+
+            Route::get('/reconciliations', [ReconciliationController::class, 'index']);
+            Route::post('/reconciliations', [ReconciliationController::class, 'store']);
+            Route::post('/reconciliations/{reconciliation}/status', [ReconciliationController::class, 'resolve']);
 
             Route::get('/alerts', [AlertController::class, 'index']);
             Route::get('/alerts/{alert}', [AlertController::class, 'show']);

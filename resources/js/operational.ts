@@ -1,6 +1,6 @@
 import type { View } from './types';
 
-export type OperationalModuleView = Exclude<View, 'dashboard' | 'procurement'>;
+export type OperationalModuleView = Exclude<View, 'dashboard' | 'procurement' | 'finance'>;
 
 export const operationalPageContent: Record<OperationalModuleView, {
     title: string;

@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             'purchasing' => 'compras@lavictoria.test',
             'finance' => 'cobranzas@lavictoria.test',
         ];
+        $userIds = [];
         foreach ($roles as $role => $email) {
             $user = User::create([
                 'name' => ucfirst($role).' Demo',
@@ -33,6 +34,7 @@ class DatabaseSeeder extends Seeder
                 'email_verified_at' => now(),
                 'password' => Hash::make(env('DEMO_USER_PASSWORD', '123456')),
             ]);
+            $userIds[$role] = $user->id;
             DB::table('organization_user')->insert([
                 'organization_id' => $organizationId, 'user_id' => $user->id, 'role' => $role,
                 'created_at' => now(), 'updated_at' => now(),
@@ -43,6 +45,17 @@ class DatabaseSeeder extends Seeder
                     'created_at' => now(), 'updated_at' => now(),
                 ]);
             }
+        }
+        $cashRegisterId = DB::table('cash_registers')->insertGetId([
+            'organization_id' => $organizationId, 'branch_id' => $branchIds->first(),
+            'name' => 'Mostrador Centro', 'active' => true, 'created_by' => $userIds['admin'],
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        foreach (['admin', 'sales', 'finance'] as $role) {
+            DB::table('cash_register_user')->insert([
+                'cash_register_id' => $cashRegisterId, 'user_id' => $userIds[$role],
+                'created_at' => now(), 'updated_at' => now(),
+            ]);
         }
         $locationId = DB::table('locations')->insertGetId([
             'organization_id' => $organizationId, 'branch_id' => $branchIds->first(),

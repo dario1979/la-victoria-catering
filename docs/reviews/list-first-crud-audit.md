@@ -30,6 +30,10 @@ Fecha: 2026-07-28
 | Recetas | No existía | `GET /recipes` | Backend server-side completo | No expuesto | Crear, ver, cambiar estado | Producción |
 | Producción | `#production` | `GET /production-orders` | Ordenar, paginar, exportar | Alta y seguimiento fijos | Crear, ver, requerimientos, iniciar, completar, trazabilidad | Producción |
 | Pagos | `#payments` | `GET /payments` | Buscar, filtrar medio, ordenar, paginar, exportar | Alta fija | Crear, ver | Flujo e idempotencia |
+| Caja | `#finance` | `GET /cash-sessions` | Buscar caja, filtrar estado, ordenar, paginar, exportar | Centro financiero | Abrir, mover, cerrar, aprobar | Roles y asignación |
+| Cuenta corriente | `#finance` | `GET /customer-accounts` | Buscar cliente, filtrar, ordenar, paginar, exportar | Centro financiero | Crear partida, reversar, ver saldo | Saldo derivado |
+| Cuentas por pagar | `#finance` | `GET /accounts-payable` | Buscar documento/proveedor, filtrar, ordenar, paginar, exportar | Centro financiero | Pagar, reversar | Desde recepción |
+| Conciliación | `#finance` | `GET /reconciliations` | Buscar referencia, filtrar, ordenar, paginar, exportar | Centro financiero | Crear, resolver | Evidencia externa |
 | Movimientos de caja | No existe | No existe | Escritura interna inmutable | — | Sin UI/API pública | Flujo de pago |
 | Entregas | Dentro de pedidos | No existe listado propio | Estado reflejado en pedido | Entrega fija | Registrar entrega | Flujo vertical |
 | Alertas | `#alerts` | `GET /alerts` | Buscar, filtrar severidad/estado, ordenar, paginar, exportar | Resolución fija | Ver, reconocer, resolver | Flujo de alertas |

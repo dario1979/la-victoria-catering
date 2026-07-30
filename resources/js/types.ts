@@ -9,6 +9,7 @@ export type View =
     | 'production'
     | 'payments'
     | 'procurement'
+    | 'finance'
     | 'alerts';
 
 export type OrderStatus =
@@ -69,6 +70,7 @@ export interface Payment {
     amount: string;
     method: 'cash' | 'transfer' | 'mercadopago' | 'card';
     external_reference?: string;
+    cash_session_id?: number | null;
 }
 
 export interface DashboardMetrics {

@@ -3,6 +3,7 @@
 namespace App\Domain\Procurement;
 
 use App\Domain\Alerts\AlertManager;
+use App\Domain\Finance\AccountsPayableManager;
 use App\Domain\Production\ProductionRequirements;
 use App\Models\InventoryLot;
 use App\Models\Location;
@@ -25,6 +26,7 @@ final class ReceivePurchaseOrder
         private readonly ProcurementQuantity $quantities,
         private readonly PurchaseOrderWorkflow $workflow,
         private readonly AlertManager $alerts,
+        private readonly AccountsPayableManager $accountsPayable,
         private readonly ProductionRequirements $productionRequirements,
     ) {}
 
@@ -175,6 +177,7 @@ final class ReceivePurchaseOrder
                 'context' => json_encode(['purchase_order_id' => $order->id], JSON_THROW_ON_ERROR),
                 'created_at' => now(), 'updated_at' => now(),
             ]);
+            $this->accountsPayable->fromReceipt($receipt);
 
             return $receipt->fresh(['order.supplier', 'items']);
         });

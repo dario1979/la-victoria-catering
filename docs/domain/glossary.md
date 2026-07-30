@@ -14,5 +14,10 @@
 | Recepción de compra | Registro idempotente de mercadería recibida, aceptada y rechazada; sólo lo aceptado incrementa stock. |
 | Discrepancia de recepción | Diferencia accionable por faltante, exceso, daño, calidad o producto incorrecto. |
 | Cobranza | Aplicación idempotente de un pago a una cuenta o comprobante. |
-| Caja | Sesión operativa de apertura, movimientos, arqueo y cierre. |
+| Caja | Punto operativo de efectivo perteneciente a una sucursal y con usuarios autorizados. |
+| Sesión de caja | Período entre apertura y cierre con saldo inicial, movimientos, conteo y diferencia. |
+| Movimiento de caja | Hecho inmutable expresado en centavos con signo; se corrige con un reverso. |
+| Ledger de cliente | Secuencia inmutable de cargos y créditos de la que se deriva la cuenta corriente. |
+| Cuenta por pagar | Obligación operativa con un proveedor originada por una recepción. |
+| Conciliación | Comparación auditada entre un movimiento interno y evidencia externa. |
 | Alerta | Incidente accionable originado por evento y gobernado por una regla. |
