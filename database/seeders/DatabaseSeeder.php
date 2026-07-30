@@ -71,10 +71,20 @@ class DatabaseSeeder extends Seeder
             'type' => 'raw_material', 'unit' => 'g', 'minimum_stock' => '5000.000',
             'price' => '0.00', 'active' => true, 'created_at' => now(), 'updated_at' => now(),
         ]);
-        DB::table('inventory_lots')->insert([
+        $lotId = DB::table('inventory_lots')->insertGetId([
             'product_id' => $productId, 'location_id' => $locationId, 'code' => 'DEMO-001',
             'unit' => 'unit', 'quantity' => '50.000', 'reserved_quantity' => '0.000',
             'expires_at' => now()->addDays(7)->toDateString(), 'status' => 'available',
+            'organization_id' => $organizationId, 'branch_id' => $branchIds->first(),
+            'created_by' => $userIds['admin'],
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        DB::table('stock_movements')->insert([
+            'organization_id' => $organizationId, 'branch_id' => $branchIds->first(),
+            'product_id' => $productId, 'location_id' => $locationId, 'inventory_lot_id' => $lotId,
+            'unit' => 'unit', 'quantity' => '50.000', 'type' => 'initial',
+            'reason' => 'pilot_seed', 'performed_by' => $userIds['admin'],
+            'idempotency_key' => 'pilot-seed:demo-lot',
             'created_at' => now(), 'updated_at' => now(),
         ]);
         DB::table('customers')->insert([

@@ -76,6 +76,8 @@ jobs:
         run: |
           php artisan migrate:status > storage/test-results/migrations.txt
           php artisan route:list --json > storage/test-results/routes.json
+      - name: Verify operational integrity
+        run: php artisan bakery:integrity-check --format=json > storage/test-results/integrity.json
       - name: Run PHPUnit
         run: php artisan test --log-junit storage/test-results/phpunit.xml
       - run: vendor/bin/pint --test
@@ -151,6 +153,8 @@ jobs:
         run: docker compose up -d --wait --wait-timeout 120
       - name: Rebuild seeded smoke database
         run: docker compose exec -T backend php artisan migrate:fresh --seed --force
+      - name: Verify seeded database integrity
+        run: docker compose exec -T backend php artisan bakery:integrity-check --format=json > .ci-artifacts/integrity.json
       - name: Run authenticated HTTP smoke
         run: bash scripts/ci-smoke.sh http://127.0.0.1:8080 http://127.0.0.1:8000
         env:
