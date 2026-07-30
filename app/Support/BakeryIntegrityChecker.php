@@ -324,6 +324,21 @@ final class BakeryIntegrityChecker
                         ->whereNull('batch.rolled_back_at'))),
             'batch.organization_id', 'batch.branch_id', $organizationId, $branchId
         ));
+        $this->query('pilot.tenant_alignment', 'Los escenarios piloto conservan alcance, estado y evidencia coherentes.', $this->scope(
+            DB::table('pilot_scenarios as scenario')
+                ->join('branches as branch', 'branch.id', '=', 'scenario.branch_id')
+                ->selectRaw('scenario.id AS violation_id')
+                ->where(fn (Builder $query) => $query
+                    ->whereColumn('branch.organization_id', '!=', 'scenario.organization_id')
+                    ->orWhereNotIn('scenario.status', ['seeded', 'passed', 'failed', 'cleaned'])
+                    ->orWhere(fn (Builder $finished) => $finished
+                        ->whereIn('scenario.status', ['passed', 'failed'])
+                        ->whereNull('scenario.rehearsed_at'))
+                    ->orWhere(fn (Builder $passed) => $passed
+                        ->where('scenario.status', 'passed')
+                        ->whereNull('scenario.result'))),
+            'scenario.organization_id', 'scenario.branch_id', $organizationId, $branchId
+        ));
         $this->query('idempotency.payloads', 'Las claves idempotentes tienen hash y respuesta válidos.', DB::table('idempotency_keys')
             ->selectRaw('id AS violation_id')
             ->where(fn (Builder $query) => $query

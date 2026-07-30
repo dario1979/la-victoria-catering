@@ -52,3 +52,6 @@ Desactivar acceso al piloto, detener workers antes de restaurar si hay mutacione
 ## Salida
 
 El piloto se aprueba sólo con todos los escenarios obligatorios, cero defectos críticos/altos abiertos, reconciliación de saldos, revisión de permisos, backup restaurable y firma explícita de cada responsable funcional.
+# Ensayo automatizado
+
+Antes del piloto humano, ejecutar el [ensayo técnico reproducible](pilot-rehearsal.md). Su resultado complementa este plan; no reemplaza la aceptación de los operadores.
