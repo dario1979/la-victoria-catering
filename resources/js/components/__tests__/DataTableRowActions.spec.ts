@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils';
+import { DOMWrapper, mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import { describe, expect, it } from 'vitest';
 import DataTableRowActions from '../data-table/DataTableRowActions.vue';
@@ -19,7 +19,8 @@ describe('DataTableRowActions', () => {
         await trigger.trigger('click');
         await nextTick();
 
-        const items = wrapper.findAll('[role="menuitem"]');
+        const items = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]'))
+            .map((element) => new DOMWrapper(element));
         expect(document.activeElement).toBe(items[0].element);
 
         await items[0].trigger('keydown', { key: 'ArrowDown' });
@@ -27,7 +28,7 @@ describe('DataTableRowActions', () => {
         await items[1].trigger('keydown', { key: 'Home' });
         expect(document.activeElement).toBe(items[0].element);
         await items[0].trigger('keydown', { key: 'Escape' });
-        expect(wrapper.find('[role="menu"]').exists()).toBe(false);
+        expect(document.querySelector('[role="menu"]')).toBeNull();
         expect(document.activeElement).toBe(trigger.element);
 
         wrapper.unmount();

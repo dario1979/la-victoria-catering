@@ -17,6 +17,9 @@
 /auth.json
 /node_modules
 /.npm-cache
+/playwright-report
+/test-results
+/.e2e-artifacts
 /public/build
 /public/fonts-manifest.dev.json
 /public/hot

@@ -6,8 +6,13 @@
 .env.*
 !.env.example
 node_modules
+.npm-cache
 vendor
 public/build
+public/hot
+playwright-report
+test-results
+.e2e-artifacts
 bootstrap/cache/*
 storage/logs/*
 storage/framework/cache/*

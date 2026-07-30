@@ -80,7 +80,7 @@ button, input, select, textarea { min-height: 44px; }
     border-radius: var(--radius-md); color: #ddcfc4; background: transparent; padding: .7rem; text-align: left;
 }
 .sidebar nav button:hover, .sidebar nav button.active { color: #fff; background: var(--cacao-soft); }
-.nav-icon { display: grid; width: 28px; place-items: center; color: #e1bc86; font-size: .66rem; font-weight: 800; letter-spacing: .02em; }
+.nav-icon { display: grid; width: 28px; place-items: center; color: #f4d6aa; font-size: .66rem; font-weight: 800; letter-spacing: .02em; }
 .sidebar-foot { display: grid; gap: var(--space-3); margin-top: auto; padding: var(--space-4) var(--space-2); }
 .connection { color: #b9ddc1; font-size: .78rem; }
 .connection::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: var(--space-2); border-radius: 50%; background: #77b482; }
@@ -271,7 +271,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--terracotta); box
 }
 .row-actions-trigger:hover { border-color: var(--line); background: var(--surface-muted); }
 .row-actions-menu {
-    position: absolute; top: calc(100% + 4px); right: 0; z-index: 45; display: grid;
+    position: fixed; z-index: 100; display: grid; overflow-y: auto;
     min-width: 190px; border: 1px solid var(--line); border-radius: var(--radius-md);
     background: var(--surface); box-shadow: var(--shadow-raised); padding: var(--space-1);
 }
@@ -539,7 +539,6 @@ body.modal-open { overflow: hidden; }
     td.actions-column, td[data-label="Acciones"] { display: block; padding-top: var(--space-2); }
     td[data-label="Acciones"]::before { display: none; }
     .row-actions-trigger { width: 100%; justify-content: space-between; border-color: var(--line); }
-    .row-actions-menu { position: static; width: 100%; margin-top: var(--space-1); box-shadow: none; }
     .ingredient-row { grid-template-columns: 1fr; }
     .ingredient-row > button { grid-column: auto; justify-self: stretch; }
     .detail-grid { grid-template-columns: 1fr; }

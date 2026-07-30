@@ -7,6 +7,7 @@
         "build": "vite build",
         "dev": "vite",
         "lint:openapi": "redocly lint docs/contracts/openapi.yaml",
+        "test:e2e": "playwright test",
         "test:frontend": "vitest run",
         "test:pwa": "node scripts/verify-pwa.mjs",
         "typecheck": "vue-tsc --noEmit"
@@ -16,6 +17,8 @@
         "vue": "^3.5.0"
     },
     "devDependencies": {
+        "@axe-core/playwright": "^4.12.1",
+        "@playwright/test": "^1.62.1",
         "@redocly/cli": "^2.43.1",
         "@tailwindcss/vite": "^4.0.0",
         "@vitejs/plugin-vue": "^6.0.0",
